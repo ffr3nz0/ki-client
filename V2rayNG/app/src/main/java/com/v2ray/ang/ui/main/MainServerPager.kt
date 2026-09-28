@@ -1,6 +1,11 @@
 package com.v2ray.ang.ui.main
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -462,120 +467,58 @@ private fun ServerPowerButton(
     isDark: Boolean,
     onClick: () -> Unit
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.90f else 1f,
-        animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f),
-        label = "pressScale"
-    )
-
     val infiniteTransition = rememberInfiniteTransition(label = "powerPulse")
-
-    // Sonar Wave 1
-    val wave1Progress by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.45f,
         animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = LinearEasing),
+            animation = tween(1600, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "wave1"
+        label = "pulseScale"
     )
-
-    // Sonar Wave 2 (offset)
-    val wave2Progress by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 0f,
         animationSpec = infiniteRepeatable(
-            animation = tween(2000, delayMillis = 1000, easing = LinearEasing),
+            animation = tween(1600, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "wave2"
-    )
-
-    // Gentle breathing pulse on the power icon when active
-    val iconBreatheScale by infiniteTransition.animateFloat(
-        initialValue = 0.92f,
-        targetValue = 1.08f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1100, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "iconBreathe"
+        label = "pulseAlpha"
     )
 
     Box(
-        modifier = Modifier
-            .size(56.dp)
-            .scale(pressScale),
+        modifier = Modifier.size(54.dp),
         contentAlignment = Alignment.Center
     ) {
         if (isRunning) {
-            // Sonar Wave 1
-            val scale1 = 1f + (wave1Progress * 0.45f)
-            val alpha1 = ((1f - wave1Progress) * 0.38f).coerceIn(0f, 0.38f)
             Box(
                 modifier = Modifier
-                    .size(48.dp)
-                    .scale(scale1)
+                    .size(54.dp)
+                    .scale(pulseScale)
                     .clip(CircleShape)
-                    .background(colorFabActive.copy(alpha = alpha1))
-            )
-
-            // Sonar Wave 2
-            val scale2 = 1f + (wave2Progress * 0.45f)
-            val alpha2 = ((1f - wave2Progress) * 0.38f).coerceIn(0f, 0.38f)
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .scale(scale2)
-                    .clip(CircleShape)
-                    .background(colorFabActive.copy(alpha = alpha2))
+                    .border(1.8.dp, colorFabActive.copy(alpha = pulseAlpha), CircleShape)
             )
         }
 
-        // Clean flat button surface (no 3D shadows, no 3D beveled borders, pure modern flat design)
         Box(
             modifier = Modifier
-                .size(48.dp)
+                .size(54.dp)
                 .clip(CircleShape)
-                .background(
-                    if (isRunning) {
-                        colorFabActive
-                    } else {
-                        if (isDark) Color(0xFF161926) else Color(0xFFF1F5F9)
-                    }
+                .background(if (isRunning) colorFabActive else (if (isDark) Color(0xFF222533) else Color(0xFFF1F5F9)))
+                .border(
+                    width = if (isRunning) 0.dp else 1.2.dp,
+                    color = if (isRunning) Color.Transparent else (if (isDark) Color(0xFF333748) else Color(0xFFCBD5E1)),
+                    shape = CircleShape
                 )
-                .then(
-                    if (!isRunning) {
-                        Modifier.border(
-                            1.dp,
-                            if (isDark) Color(0xFF282D3E) else Color(0xFFCBD5E1),
-                            CircleShape
-                        )
-                    } else {
-                        Modifier
-                    }
-                )
-                .clickable(
-                    interactionSource = interactionSource,
-                    indication = null,
-                    onClick = onClick
-                ),
+                .clickable { onClick() },
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_power_24dp),
                 contentDescription = stringResource(if (isRunning) R.string.acc_stop else R.string.acc_start),
-                modifier = Modifier
-                    .size(24.dp)
-                    .scale(if (isRunning) iconBreatheScale else 1f),
-                tint = if (isRunning) {
-                    Color(0xFF072414)
-                } else {
-                    if (isDark) colorFabActive else Color(0xFF059669)
-                }
+                modifier = Modifier.size(26.dp),
+                tint = if (isRunning) Color.Black else (if (isDark) colorFabActive else Color(0xFF059669))
             )
         }
     }
@@ -628,59 +571,27 @@ private fun ServerListItem(
         null
     }
 
-    val targetBgColor = if (isDark) {
-        if (isItemRunning) Color(0xFF141826) else if (isSelected) Color(0xFF131724) else Color(0xFF11131E)
-    } else {
-        if (isItemRunning) Color(0xFFF0FDF4) else if (isSelected) Color(0xFFF8FAFC) else Color(0xFFFFFFFF)
-    }
-
-    val cardBgColor by animateColorAsState(
-        targetValue = targetBgColor,
-        animationSpec = tween(250, easing = FastOutSlowInEasing),
-        label = "serverCardBg"
-    )
+    val cardBg = if (isDark) Color(0xFF12141D) else Color(0xFFFFFFFF)
 
     val cardBorderBrush = remember(isDark, isItemRunning, isSelected) {
         if (isSelected) {
-            if (isDark) {
-                if (isItemRunning) {
-                    Brush.linearGradient(
-                        listOf(
-                            colorFabActive.copy(alpha = 0.70f),
-                            Color(0xFF00B0FF).copy(alpha = 0.35f),
-                            Color(0x22FFFFFF)
-                        )
+            Brush.linearGradient(
+                if (isDark) {
+                    listOf(
+                        colorFabActive.copy(alpha = if (isItemRunning) 0.65f else 0.50f),
+                        Color(0xFF00B0FF).copy(alpha = 0.25f),
+                        Color(0x22FFFFFF)
                     )
                 } else {
-                    Brush.linearGradient(
-                        listOf(
-                            colorFabActive.copy(alpha = 0.50f),
-                            Color(0xFF00B0FF).copy(alpha = 0.25f),
-                            Color(0x18FFFFFF)
-                        )
+                    listOf(
+                        colorFabActive.copy(alpha = if (isItemRunning) 0.60f else 0.40f),
+                        Color(0xFF00B0FF).copy(alpha = 0.20f),
+                        Color(0xFFE2E8F0)
                     )
                 }
-            } else {
-                if (isItemRunning) {
-                    Brush.linearGradient(
-                        listOf(
-                            colorFabActive.copy(alpha = 0.75f),
-                            Color(0xFF00B0FF).copy(alpha = 0.35f),
-                            Color(0xFFE2E8F0)
-                        )
-                    )
-                } else {
-                    Brush.linearGradient(
-                        listOf(
-                            colorFabActive.copy(alpha = 0.50f),
-                            Color(0xFF00B0FF).copy(alpha = 0.20f),
-                            Color(0xFFE2E8F0)
-                        )
-                    )
-                }
-            }
+            )
         } else {
-            val unselectedBorder = if (isDark) Color(0xFF1E2232) else Color(0xFFE2E8F0)
+            val unselectedBorder = if (isDark) Color(0xFF1C1F2E) else Color(0xFFE2E8F0)
             Brush.linearGradient(listOf(unselectedBorder, unselectedBorder))
         }
     }
@@ -697,7 +608,7 @@ private fun ServerListItem(
             .clip(RoundedCornerShape(18.dp))
             .clickable { actions.select(row.guid) },
         shape = RoundedCornerShape(18.dp),
-        color = cardBgColor,
+        color = cardBg,
         shadowElevation = 0.dp,
         tonalElevation = 0.dp,
         border = BorderStroke(if (isSelected) 1.2.dp else 1.dp, cardBorderBrush)
@@ -986,29 +897,37 @@ private fun ServerListItem(
                                     tint = actionIconTint
                                 )
                             }
-                            Spacer(modifier = Modifier.width(4.dp))
-                            IconButton(
-                                onClick = { actions.edit(row.guid, row.profile) },
-                                modifier = Modifier.size(32.dp)
+                            AnimatedVisibility(
+                                visible = !isItemRunning,
+                                enter = fadeIn(tween(250)) + expandHorizontally(tween(250)),
+                                exit = fadeOut(tween(200)) + shrinkHorizontally(tween(200))
                             ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_edit_24dp),
-                                    contentDescription = stringResource(R.string.acc_edit),
-                                    modifier = Modifier.size(18.dp),
-                                    tint = actionIconTint
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(4.dp))
-                            IconButton(
-                                onClick = { actions.remove(row.guid) },
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_delete_24dp),
-                                    contentDescription = stringResource(R.string.acc_delete),
-                                    modifier = Modifier.size(18.dp),
-                                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    IconButton(
+                                        onClick = { actions.edit(row.guid, row.profile) },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_edit_24dp),
+                                            contentDescription = stringResource(R.string.acc_edit),
+                                            modifier = Modifier.size(18.dp),
+                                            tint = actionIconTint
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    IconButton(
+                                        onClick = { actions.remove(row.guid) },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_delete_24dp),
+                                            contentDescription = stringResource(R.string.acc_delete),
+                                            modifier = Modifier.size(18.dp),
+                                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }

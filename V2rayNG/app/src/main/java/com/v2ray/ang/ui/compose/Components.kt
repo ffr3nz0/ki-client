@@ -74,8 +74,18 @@ fun AppTopBar(
     searchPlaceholder: String? = null,
     navigationIcon: @Composable (() -> Unit)? = null,
     titleContent: @Composable (() -> Unit)? = null,
+    containerColor: Color? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
+    val isDark = LocalDarkTheme.current
+    val effectiveContainerColor = containerColor ?: if (LocalLiquidGlassEnabled.current) {
+        Color.Transparent
+    } else if (isDark) {
+        Color(0xFF0B0D14)
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
+
     Column {
         TopAppBar(
             title = {
@@ -105,7 +115,7 @@ fun AppTopBar(
             },
             actions = actions,
             colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = if (LocalLiquidGlassEnabled.current) Color.Transparent else MaterialTheme.colorScheme.surface,
+                containerColor = effectiveContainerColor,
                 titleContentColor = MaterialTheme.colorScheme.onSurface,
                 navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
                 actionIconContentColor = MaterialTheme.colorScheme.onSurface
