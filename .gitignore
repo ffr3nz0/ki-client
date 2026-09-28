@@ -1,34 +1,77 @@
 # Gradle files
 .gradle/
 build/
+V2rayNG/.gradle/
+V2rayNG/build/
+V2rayNG/app/build/
 
 # Local configuration file (sdk path, etc)
 local.properties
+V2rayNG/local.properties
+signing.properties
 
 # Log/OS Files
 *.log
+*.tmp
+*.bak
+*.swp
+*.orig
+Thumbs.db
+.DS_Store
 
 # Android Studio generated files and folders
 captures/
 .externalNativeBuild/
 .cxx/
-*.aab
-*.apk
 output-metadata.json
+V2rayNG/app/release/output.json
 
-# IntelliJ
+# IntelliJ / IDE
 *.iml
 .idea/
 misc.xml
 deploymentTargetDropDown.xml
 render.experimental.xml
+.vscode/
+.classpath
+.project
+.settings/
+*.sublime-workspace
+*.sublime-project
 
-# Keystore files
+# Keystore and secret files
+*.dat
 *.jks
 *.keystore
 
 # Google Services (e.g. APIs or Firebase)
 google-services.json
+V2rayNG/app/google-services.json
 
 # Android Profiling
 *.hprof
+
+# Ignore APK and AAR files
+*.apk
+*.aab
+*.aar
+
+# Native libraries
+V2rayNG/app/libs
+
+# Compiled classes and archives
+*.class
+*.jar
+*.war
+*.ear
+!gradle/wrapper/gradle-wrapper.jar
+!V2rayNG/gradle/wrapper/gradle-wrapper.jar
+
+# Native binaries
+*.so
+*.exe
+*.dll
+*.obj
+*.o
+*.pyc
+*.pyo
