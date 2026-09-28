@@ -578,5 +578,6 @@
     <string name="action_downloading">جار التحميل…</string>
     <string name="action_install_now">تثبيت الآن</string>
     <string name="value_unknown">غير معروف</string>
+    <string name="toast_dns_cache_cleared">تم مسح ذاكرة التخزين المؤقت لـ IP، جارٍ إعادة التحليل…</string>
 
 </resources>

@@ -570,5 +570,6 @@
     <string name="action_downloading">ডাউনলোড হচ্ছে…</string>
     <string name="action_install_now">এখন ইনস্টল করুন</string>
     <string name="value_unknown">অজানা</string>
+    <string name="toast_dns_cache_cleared">DNS IP ক্যাশে মুছে ফেলা হয়েছে, পুনরায় রেজলভ করা হচ্ছে…</string>
 
 </resources>

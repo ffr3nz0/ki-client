@@ -368,6 +368,26 @@ fun InAppUpdateDialog(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
+                if (updateInfo.downloadUrl.isNullOrEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (isDark) Color(0xFF262117) else Color(0xFFFEF3C7))
+                            .border(1.dp, if (isDark) Color(0xFF4D3D1E) else Color(0xFFFDE68A), RoundedCornerShape(10.dp))
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = "فایل APK هنوز به این ریلیز پیوست نشده است",
+                            fontSize = 11.5.sp,
+                            color = if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309),
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(14.dp))
+                }
+
                 // Action Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -400,6 +420,11 @@ fun InAppUpdateDialog(
                     // Main Action Button
                     Button(
                         onClick = {
+                            if (updateInfo.downloadUrl.isNullOrEmpty()) {
+                                val url = updateInfo.releaseUrl ?: "https://github.com/ffr3nz0/ki-client/releases"
+                                com.v2ray.ang.util.Utils.openUri(context, url)
+                                return@Button
+                            }
                             val apk = downloadedApk ?: (downloadProgress as? UpdateDownloadProgress.Completed)?.apkFile
                             if (apk != null && apk.exists()) {
                                 if (!AppUpdateManager.canInstallPackages(context)) {
@@ -432,7 +457,7 @@ fun InAppUpdateDialog(
                                 }
                             }
                         },
-                        enabled = !isDownloading && !updateInfo.downloadUrl.isNullOrEmpty(),
+                        enabled = !isDownloading,
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = colorFabActive,
@@ -465,6 +490,18 @@ fun InAppUpdateDialog(
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = stringResource(R.string.action_install_now),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        } else if (updateInfo.downloadUrl.isNullOrEmpty()) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_github_24dp),
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "گیت‌هاب",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold
                             )

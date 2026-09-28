@@ -568,5 +568,6 @@
     <string name="action_downloading">Đang tải xuống…</string>
     <string name="action_install_now">Cài đặt ngay</string>
     <string name="value_unknown">không xác định</string>
+    <string name="toast_dns_cache_cleared">Đã xóa bộ nhớ đệm DNS IP, đang phân giải lại tên miền…</string>
 
 </resources>

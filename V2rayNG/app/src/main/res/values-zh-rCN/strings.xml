@@ -568,5 +568,6 @@
     <string name="action_downloading">下载中…</string>
     <string name="action_install_now">立即安装</string>
     <string name="value_unknown">未知</string>
+    <string name="toast_dns_cache_cleared">DNS IP 缓存已清除，正在重新解析域名…</string>
 
 </resources>

@@ -574,5 +574,6 @@
     <string name="action_downloading">Загрузка…</string>
     <string name="action_install_now">Установить</string>
     <string name="value_unknown">неизвестно</string>
+    <string name="toast_dns_cache_cleared">Кэш DNS IP очищен, повторное разрешение домена…</string>
 
 </resources>

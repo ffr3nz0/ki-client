@@ -39,6 +39,7 @@ data class AppUpdateInfo(
     val latestVersion: String? = null,
     val releaseNotes: String? = null,
     val downloadUrl: String? = null,
+    val releaseUrl: String? = null,
     val isPreRelease: Boolean = false,
     val isForceUpdate: Boolean = false,
     val apkSize: Long = 0L
@@ -155,11 +156,13 @@ object AppUpdateManager {
             }
         } else null
 
+        val releaseUrl = latestRelease.htmlUrl.ifEmpty { "https://github.com/ffr3nz0/ki-client/releases" }
         return AppUpdateInfo(
             hasUpdate = hasUpdate,
             latestVersion = latestVersion,
             releaseNotes = latestRelease.body,
             downloadUrl = downloadUrl,
+            releaseUrl = releaseUrl,
             isPreRelease = latestRelease.prerelease
         )
     }

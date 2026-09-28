@@ -570,5 +570,6 @@
     <string name="action_downloading">د حال گرتن…</string>
     <string name="action_install_now">نصب کردن</string>
     <string name="value_unknown">نا مؽخص</string>
+    <string name="toast_dns_cache_cleared">کش IP دامین‌ها پاکسازی بی، در حال گردن نوسخه جدید…</string>
 
 </resources>

@@ -453,52 +453,103 @@ private fun ServerItemColumn(
 }
 
 @Composable
-private fun AnimatedLiveWave(
+private fun ServerPowerButton(
     isRunning: Boolean,
-    tint: Color,
-    modifier: Modifier = Modifier
+    isDark: Boolean,
+    onClick: () -> Unit
 ) {
-    if (!isRunning) return
-    val transition = rememberInfiniteTransition(label = "liveWave")
-    val h1 by transition.animateFloat(
-        initialValue = 0.25f, targetValue = 1.0f,
-        animationSpec = infiniteRepeatable(tween(420, easing = LinearEasing), RepeatMode.Reverse),
-        label = "h1"
+    val infiniteTransition = rememberInfiniteTransition(label = "powerPulse")
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.25f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "powerScale"
     )
-    val h2 by transition.animateFloat(
-        initialValue = 0.90f, targetValue = 0.20f,
-        animationSpec = infiniteRepeatable(tween(540, easing = LinearEasing), RepeatMode.Reverse),
-        label = "h2"
-    )
-    val h3 by transition.animateFloat(
-        initialValue = 0.30f, targetValue = 0.95f,
-        animationSpec = infiniteRepeatable(tween(620, easing = LinearEasing), RepeatMode.Reverse),
-        label = "h3"
-    )
-    val h4 by transition.animateFloat(
-        initialValue = 0.85f, targetValue = 0.35f,
-        animationSpec = infiniteRepeatable(tween(480, easing = LinearEasing), RepeatMode.Reverse),
-        label = "h4"
-    )
-    val h5 by transition.animateFloat(
-        initialValue = 0.40f, targetValue = 0.80f,
-        animationSpec = infiniteRepeatable(tween(580, easing = LinearEasing), RepeatMode.Reverse),
-        label = "h5"
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.40f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "powerAlpha"
     )
 
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(2.5.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Box(
+        modifier = Modifier.size(58.dp),
+        contentAlignment = Alignment.Center
     ) {
-        listOf(h1, h2, h3, h4, h5).forEach { factor ->
+        if (isRunning) {
             Box(
                 modifier = Modifier
-                    .width(3.dp)
-                    .height((13 * factor).dp.coerceAtLeast(3.dp))
-                    .clip(RoundedCornerShape(1.5.dp))
-                    .background(tint)
+                    .size(54.dp)
+                    .scale(pulseScale)
+                    .clip(CircleShape)
+                    .background(colorFabActive.copy(alpha = pulseAlpha))
             )
+        }
+
+        Surface(
+            modifier = Modifier
+                .size(52.dp)
+                .clip(CircleShape)
+                .clickable { onClick() },
+            shape = CircleShape,
+            color = if (isRunning) Color.Transparent else (if (isDark) Color(0xFF1E2330) else Color(0xFFF1F5F9)),
+            shadowElevation = if (isRunning) 6.dp else 2.dp,
+            border = if (isRunning) {
+                BorderStroke(1.5.dp, Color(0xFF69F0AE))
+            } else {
+                BorderStroke(
+                    1.5.dp,
+                    if (isDark) Color(0xFF2E3547) else Color(0xFFCBD5E1)
+                )
+            }
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (isRunning) {
+                            Modifier.background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        Color(0xFF00E676),
+                                        Color(0xFF00C853)
+                                    )
+                                )
+                            )
+                        } else {
+                            Modifier.background(
+                                if (isDark) Color(0xFF1E2330) else Color(0xFFF8FAFC)
+                            )
+                        }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (!isRunning && isDark) {
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(colorFabActive.copy(alpha = 0.08f))
+                    )
+                }
+
+                Icon(
+                    painter = painterResource(R.drawable.ic_power_24dp),
+                    contentDescription = stringResource(if (isRunning) R.string.acc_stop else R.string.acc_start),
+                    modifier = Modifier.size(24.dp),
+                    tint = if (isRunning) {
+                        Color(0xFF0A2216)
+                    } else {
+                        if (isDark) colorFabActive else Color(0xFF059669)
+                    }
+                )
+            }
         }
     }
 }
@@ -661,14 +712,6 @@ private fun ServerListItem(
                         }
                     }
 
-                    // Center Live Equalizer Wave
-                    if (isItemRunning) {
-                        AnimatedLiveWave(
-                            isRunning = true,
-                            tint = colorFabActive,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-                    }
 
                     // Right Timer Badge or Protocol Chip
                     if (isItemRunning) {
@@ -821,63 +864,11 @@ private fun ServerListItem(
 
                     Spacer(modifier = Modifier.width(12.dp))
 
-                    // Circular Power Button Box with 3D gloss & breathing pulse
-                    Box(
-                        modifier = Modifier.size(62.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (isItemRunning) {
-                            Box(
-                                modifier = Modifier
-                                    .size(56.dp)
-                                    .scale(pulseScale)
-                                    .clip(CircleShape)
-                                    .border(2.dp, colorFabActive.copy(alpha = pulseAlpha), CircleShape)
-                            )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    if (isItemRunning) colorFabActive
-                                    else if (isDark) Color(0xFF222533)
-                                    else Color(0xFFF1F5F9)
-                                )
-                                .border(
-                                    width = if (isItemRunning) 0.dp else 1.2.dp,
-                                    color = if (isItemRunning) Color.Transparent
-                                    else if (isDark) Color(0xFF333748)
-                                    else Color(0xFFCBD5E1),
-                                    shape = CircleShape
-                                )
-                                .drawWithContent {
-                                    drawContent()
-                                    // 3D Glass Lens reflection on top half
-                                    drawCircle(
-                                        brush = Brush.verticalGradient(
-                                            colors = listOf(
-                                                Color.White.copy(alpha = if (isItemRunning) 0.45f else 0.18f),
-                                                Color.Transparent
-                                            ),
-                                            startY = 0f,
-                                            endY = this.size.height * 0.55f
-                                        ),
-                                        radius = this.size.width * 0.48f,
-                                        center = Offset(this.size.width * 0.5f, this.size.height * 0.35f)
-                                    )
-                                }
-                                .clickable { actions.toggleService() },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_power_24dp),
-                                contentDescription = stringResource(if (isItemRunning) R.string.acc_stop else R.string.acc_start),
-                                modifier = Modifier.size(28.dp),
-                                tint = if (isItemRunning) Color.Black else colorFabActive
-                            )
-                        }
-                    }
+                    ServerPowerButton(
+                        isRunning = isItemRunning,
+                        isDark = isDark,
+                        onClick = { actions.toggleService() }
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))

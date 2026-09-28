@@ -587,5 +587,6 @@
     <string name="sub_info_refresh">بروزرسانی</string>
     <string name="sub_info_upload">آپلود</string>
     <string name="sub_info_download">دانلود</string>
+    <string name="toast_dns_cache_cleared">کش IP دامین‌ها پاکسازی شد، در حال دریافت آدرس جدید…</string>
 
 </resources>

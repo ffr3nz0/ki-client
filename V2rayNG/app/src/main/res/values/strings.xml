@@ -587,5 +587,6 @@
     <string name="sub_info_refresh">Refresh</string>
     <string name="sub_info_upload">Upload</string>
     <string name="sub_info_download">Download</string>
+    <string name="toast_dns_cache_cleared">DNS IP cache cleared, re-resolving domain…</string>
 
 </resources>

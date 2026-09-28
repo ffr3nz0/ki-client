@@ -174,6 +174,34 @@ object DnsCacheManager {
         }
     }
 
+    private var lastToggleTime = 0L
+    private var consecutiveToggleCount = 0
+    private const val TOGGLE_RESET_WINDOW_MS = 20000L // 20 seconds window
+    private const val TOGGLE_THRESHOLD_TO_CLEAR = 3 // 3 consecutive toggles
+
+    /**
+     * Records a service toggle event. If the user toggles the connection consecutively
+     * (3 times within 20 seconds), clears the DNS cache so fresh IPs are fetched from the network.
+     * Returns true if the cache was cleared as a result.
+     */
+    fun onServiceToggle(): Boolean {
+        val now = System.currentTimeMillis()
+        if (now - lastToggleTime < TOGGLE_RESET_WINDOW_MS) {
+            consecutiveToggleCount++
+        } else {
+            consecutiveToggleCount = 1
+        }
+        lastToggleTime = now
+
+        if (consecutiveToggleCount >= TOGGLE_THRESHOLD_TO_CLEAR) {
+            LogUtil.i(TAG, "Consecutive service toggle threshold ($consecutiveToggleCount) reached. Clearing DNS IP cache!")
+            clearCache()
+            consecutiveToggleCount = 0
+            return true
+        }
+        return false
+    }
+
     /**
      * Clear all cached DNS entries.
      */
