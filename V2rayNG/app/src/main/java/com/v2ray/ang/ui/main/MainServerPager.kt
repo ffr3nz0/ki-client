@@ -724,35 +724,11 @@ private fun ServerListItem(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // ROW 2: Server Icon + Remarks + Address/Stats + Circular Power Button
+                // ROW 2: Remarks, stats/test delay, and circular Power button
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Server Layers Icon
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (isDark) Color(0xFF16251E) else Color(0xFFE8FDF3))
-                            .border(
-                                1.dp,
-                                if (isItemRunning) colorFabActive.copy(alpha = 0.5f)
-                                else if (isDark) Color(0xFF263930) else Color(0xFFD1FAE5),
-                                RoundedCornerShape(12.dp)
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_layers_24dp),
-                            contentDescription = null,
-                            tint = if (isItemRunning) colorFabActive else if (isDark) Color(0xFF8F94A6) else Color(0xFF059669),
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
                     Column(
                         modifier = Modifier.weight(1f)
                     ) {
@@ -766,21 +742,86 @@ private fun ServerListItem(
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
-                        if (row.statistics.isNotBlank()) {
-                            Spacer(modifier = Modifier.height(3.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (isItemRunning) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(if (isDark) Color(0xFF0C2B1D) else Color(0xFFD1FAE5))
+                                        .padding(horizontal = 7.dp, vertical = 2.dp),
+                                    contentAlignment = Alignment.TopStart
+                                ) {
+                                    Text(
+                                        text = row.typeDescription,
+                                        color = if (isDark) colorFabActive else Color(0xFF047857),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                            if (row.statistics.isNotBlank()) {
+                                Text(
+                                    text = row.statistics,
+                                    color = if (isDark) Color(0xFF8F94A6) else Color(0xFF64748B),
+                                    fontSize = 11.5.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        val (testText, testColor) = if (isItemRunning && (status is MainStatus.Testing || status is MainStatus.TestProgress)) {
+                            Pair(stringResource(R.string.connection_test_testing), colorFabActive)
+                        } else if (isItemRunning && status is MainStatus.ConnectionTest) {
+                            val delay = status.result.delayMillis
+                            if (delay >= 0) {
+                                Pair("$delay ms", colorFabActive)
+                            } else {
+                                Pair(stringResource(R.string.connection_test_fail), colorPingRed)
+                            }
+                        } else if (row.testDelayMillis != 0L) {
+                            if (row.testDelayMillis < 0) {
+                                Pair(stringResource(R.string.connection_test_fail), colorPingRed)
+                            } else {
+                                Pair("${row.testDelayMillis} ms", colorFabActive)
+                            }
+                        } else {
+                            Pair(stringResource(R.string.connection_test_pending), colorFabActive)
+                        }
+
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .clickable { actions.testClick() }
+                                .padding(horizontal = 2.dp, vertical = 3.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_signal_cellular_alt_24dp),
+                                contentDescription = stringResource(R.string.connection_test_pending),
+                                modifier = Modifier.size(15.dp),
+                                tint = testColor
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = row.statistics,
-                                color = if (isDark) Color(0xFF8F94A6) else Color(0xFF64748B),
-                                fontSize = 11.5.sp,
+                                text = testText,
+                                color = testColor,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
 
-                    // Circular 60dp Power Button Box with 3D gloss & breathing pulse
+                    // Circular Power Button Box with 3D gloss & breathing pulse
                     Box(
                         modifier = Modifier.size(62.dp),
                         contentAlignment = Alignment.Center
@@ -796,7 +837,7 @@ private fun ServerListItem(
                         }
                         Box(
                             modifier = Modifier
-                                .size(54.dp)
+                                .size(56.dp)
                                 .clip(CircleShape)
                                 .background(
                                     if (isItemRunning) colorFabActive
@@ -807,7 +848,7 @@ private fun ServerListItem(
                                     width = if (isItemRunning) 0.dp else 1.2.dp,
                                     color = if (isItemRunning) Color.Transparent
                                     else if (isDark) Color(0xFF333748)
-                                    else Color(0xFFE2E8F0),
+                                    else Color(0xFFCBD5E1),
                                     shape = CircleShape
                                 )
                                 .drawWithContent {
@@ -832,78 +873,40 @@ private fun ServerListItem(
                             Icon(
                                 painter = painterResource(R.drawable.ic_power_24dp),
                                 contentDescription = stringResource(if (isItemRunning) R.string.acc_stop else R.string.acc_start),
-                                modifier = Modifier.size(26.dp),
+                                modifier = Modifier.size(28.dp),
                                 tint = if (isItemRunning) Color.Black else colorFabActive
                             )
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                // ROW 3: Cellular signal + Protocol chip + Ping delay test + Action buttons
-                val (testText, testColor) = if (isItemRunning && (status is MainStatus.Testing || status is MainStatus.TestProgress)) {
-                    Pair(stringResource(R.string.connection_test_testing), colorFabActive)
-                } else if (isItemRunning && status is MainStatus.ConnectionTest) {
-                    val delay = status.result.delayMillis
-                    if (delay >= 0) {
-                        Pair("$delay ms", colorFabActive)
-                    } else {
-                        Pair(stringResource(R.string.connection_test_fail), colorPingRed)
-                    }
-                } else if (row.testDelayMillis != 0L) {
-                    if (row.testDelayMillis < 0) {
-                        Pair(stringResource(R.string.connection_test_fail), colorPingRed)
-                    } else {
-                        Pair("${row.testDelayMillis} ms", colorFabActive)
-                    }
-                } else {
-                    Pair(stringResource(R.string.connection_test_pending), colorFabActive)
-                }
-
+                // ROW 3: Subscription badge & action buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable { actions.testClick() }
-                            .padding(horizontal = 2.dp, vertical = 3.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_signal_cellular_alt_24dp),
-                            contentDescription = stringResource(R.string.connection_test_pending),
-                            modifier = Modifier.size(16.dp),
-                            tint = testColor
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
+                    if (row.subscriptionBadge.isNotBlank()) {
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(if (isDark) Color(0xFF0C2B1D) else Color(0xFFD1FAE5))
-                                .padding(horizontal = 7.dp, vertical = 2.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(colorFabActive.copy(alpha = 0.15f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp),
+                            contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = row.typeDescription,
+                                text = row.subscriptionBadge.uppercase(Locale.ROOT),
                                 color = if (isDark) colorFabActive else Color(0xFF047857),
-                                fontSize = 11.sp,
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = testText,
-                            color = testColor,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1
-                        )
+                    } else {
+                        Spacer(modifier = Modifier.width(1.dp))
                     }
 
-                    // Action buttons in the footer
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         val actionIconTint = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF64748B)
                         if (doubleColumnDisplay) {
@@ -921,34 +924,36 @@ private fun ServerListItem(
                         } else {
                             IconButton(
                                 onClick = { actions.share(row.guid, row.profile) },
-                                modifier = Modifier.size(30.dp)
+                                modifier = Modifier.size(32.dp)
                             ) {
                                 Icon(
                                     painter = painterResource(R.drawable.ic_share_24dp),
                                     contentDescription = stringResource(R.string.title_configuration_share),
-                                    modifier = Modifier.size(17.dp),
+                                    modifier = Modifier.size(18.dp),
                                     tint = actionIconTint
                                 )
                             }
+                            Spacer(modifier = Modifier.width(4.dp))
                             IconButton(
                                 onClick = { actions.edit(row.guid, row.profile) },
-                                modifier = Modifier.size(30.dp)
+                                modifier = Modifier.size(32.dp)
                             ) {
                                 Icon(
                                     painter = painterResource(R.drawable.ic_edit_24dp),
                                     contentDescription = stringResource(R.string.acc_edit),
-                                    modifier = Modifier.size(17.dp),
+                                    modifier = Modifier.size(18.dp),
                                     tint = actionIconTint
                                 )
                             }
+                            Spacer(modifier = Modifier.width(4.dp))
                             IconButton(
                                 onClick = { actions.remove(row.guid) },
-                                modifier = Modifier.size(30.dp)
+                                modifier = Modifier.size(32.dp)
                             ) {
                                 Icon(
                                     painter = painterResource(R.drawable.ic_delete_24dp),
                                     contentDescription = stringResource(R.string.acc_delete),
-                                    modifier = Modifier.size(17.dp),
+                                    modifier = Modifier.size(18.dp),
                                     tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
                                 )
                             }
