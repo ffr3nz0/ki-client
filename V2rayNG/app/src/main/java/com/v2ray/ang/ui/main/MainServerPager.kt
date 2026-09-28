@@ -5,13 +5,17 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -458,98 +462,121 @@ private fun ServerPowerButton(
     isDark: Boolean,
     onClick: () -> Unit
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "powerPulse")
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.25f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1800, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "powerScale"
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.90f else 1f,
+        animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f),
+        label = "pressScale"
     )
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.40f,
-        targetValue = 0f,
+
+    val infiniteTransition = rememberInfiniteTransition(label = "powerPulse")
+
+    // Sonar Wave 1
+    val wave1Progress by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1800, easing = FastOutSlowInEasing),
+            animation = tween(2000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "powerAlpha"
+        label = "wave1"
+    )
+
+    // Sonar Wave 2 (offset)
+    val wave2Progress by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, delayMillis = 1000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "wave2"
+    )
+
+    // Gentle breathing pulse on the power icon when active
+    val iconBreatheScale by infiniteTransition.animateFloat(
+        initialValue = 0.92f,
+        targetValue = 1.08f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1100, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "iconBreathe"
     )
 
     Box(
-        modifier = Modifier.size(58.dp),
+        modifier = Modifier
+            .size(56.dp)
+            .scale(pressScale),
         contentAlignment = Alignment.Center
     ) {
         if (isRunning) {
+            // Sonar Wave 1
+            val scale1 = 1f + (wave1Progress * 0.45f)
+            val alpha1 = ((1f - wave1Progress) * 0.38f).coerceIn(0f, 0.38f)
             Box(
                 modifier = Modifier
-                    .size(54.dp)
-                    .scale(pulseScale)
+                    .size(48.dp)
+                    .scale(scale1)
                     .clip(CircleShape)
-                    .background(colorFabActive.copy(alpha = pulseAlpha))
+                    .background(colorFabActive.copy(alpha = alpha1))
+            )
+
+            // Sonar Wave 2
+            val scale2 = 1f + (wave2Progress * 0.45f)
+            val alpha2 = ((1f - wave2Progress) * 0.38f).coerceIn(0f, 0.38f)
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .scale(scale2)
+                    .clip(CircleShape)
+                    .background(colorFabActive.copy(alpha = alpha2))
             )
         }
 
-        Surface(
+        // Clean flat button surface (no 3D shadows, no 3D beveled borders, pure modern flat design)
+        Box(
             modifier = Modifier
-                .size(52.dp)
+                .size(48.dp)
                 .clip(CircleShape)
-                .clickable { onClick() },
-            shape = CircleShape,
-            color = if (isRunning) Color.Transparent else (if (isDark) Color(0xFF1E2330) else Color(0xFFF1F5F9)),
-            shadowElevation = if (isRunning) 6.dp else 2.dp,
-            border = if (isRunning) {
-                BorderStroke(1.5.dp, Color(0xFF69F0AE))
-            } else {
-                BorderStroke(
-                    1.5.dp,
-                    if (isDark) Color(0xFF2E3547) else Color(0xFFCBD5E1)
-                )
-            }
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .then(
-                        if (isRunning) {
-                            Modifier.background(
-                                Brush.verticalGradient(
-                                    listOf(
-                                        Color(0xFF00E676),
-                                        Color(0xFF00C853)
-                                    )
-                                )
-                            )
-                        } else {
-                            Modifier.background(
-                                if (isDark) Color(0xFF1E2330) else Color(0xFFF8FAFC)
-                            )
-                        }
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                if (!isRunning && isDark) {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .background(colorFabActive.copy(alpha = 0.08f))
-                    )
-                }
-
-                Icon(
-                    painter = painterResource(R.drawable.ic_power_24dp),
-                    contentDescription = stringResource(if (isRunning) R.string.acc_stop else R.string.acc_start),
-                    modifier = Modifier.size(24.dp),
-                    tint = if (isRunning) {
-                        Color(0xFF0A2216)
+                .background(
+                    if (isRunning) {
+                        colorFabActive
                     } else {
-                        if (isDark) colorFabActive else Color(0xFF059669)
+                        if (isDark) Color(0xFF161926) else Color(0xFFF1F5F9)
                     }
                 )
-            }
+                .then(
+                    if (!isRunning) {
+                        Modifier.border(
+                            1.dp,
+                            if (isDark) Color(0xFF282D3E) else Color(0xFFCBD5E1),
+                            CircleShape
+                        )
+                    } else {
+                        Modifier
+                    }
+                )
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = onClick
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_power_24dp),
+                contentDescription = stringResource(if (isRunning) R.string.acc_stop else R.string.acc_start),
+                modifier = Modifier
+                    .size(24.dp)
+                    .scale(if (isRunning) iconBreatheScale else 1f),
+                tint = if (isRunning) {
+                    Color(0xFF072414)
+                } else {
+                    if (isDark) colorFabActive else Color(0xFF059669)
+                }
+            )
         }
     }
 }
@@ -602,14 +629,9 @@ private fun ServerListItem(
     }
 
     val targetBgColor = if (isDark) {
-        if (isItemRunning) Color(0xFF0F1713) else if (isSelected) Color(0xFF131B16) else Color(0xFF13141B)
+        if (isItemRunning) Color(0xFF141826) else if (isSelected) Color(0xFF131724) else Color(0xFF11131E)
     } else {
-        if (isItemRunning) Color(0xFFE8FDF3) else if (isSelected) Color(0xFFF0FDF4) else Color(0xFFFFFFFF)
-    }
-    val targetBorderColor = if (isDark) {
-        if (isSelected) colorFabActive.copy(alpha = 0.85f) else Color(0xFF232532)
-    } else {
-        if (isSelected) colorFabActive else Color(0xFFE2E8F0)
+        if (isItemRunning) Color(0xFFF0FDF4) else if (isSelected) Color(0xFFF8FAFC) else Color(0xFFFFFFFF)
     }
 
     val cardBgColor by animateColorAsState(
@@ -617,11 +639,51 @@ private fun ServerListItem(
         animationSpec = tween(250, easing = FastOutSlowInEasing),
         label = "serverCardBg"
     )
-    val cardBorderColor by animateColorAsState(
-        targetValue = targetBorderColor,
-        animationSpec = tween(250, easing = FastOutSlowInEasing),
-        label = "serverCardBorder"
-    )
+
+    val cardBorderBrush = remember(isDark, isItemRunning, isSelected) {
+        if (isSelected) {
+            if (isDark) {
+                if (isItemRunning) {
+                    Brush.linearGradient(
+                        listOf(
+                            colorFabActive.copy(alpha = 0.70f),
+                            Color(0xFF00B0FF).copy(alpha = 0.35f),
+                            Color(0x22FFFFFF)
+                        )
+                    )
+                } else {
+                    Brush.linearGradient(
+                        listOf(
+                            colorFabActive.copy(alpha = 0.50f),
+                            Color(0xFF00B0FF).copy(alpha = 0.25f),
+                            Color(0x18FFFFFF)
+                        )
+                    )
+                }
+            } else {
+                if (isItemRunning) {
+                    Brush.linearGradient(
+                        listOf(
+                            colorFabActive.copy(alpha = 0.75f),
+                            Color(0xFF00B0FF).copy(alpha = 0.35f),
+                            Color(0xFFE2E8F0)
+                        )
+                    )
+                } else {
+                    Brush.linearGradient(
+                        listOf(
+                            colorFabActive.copy(alpha = 0.50f),
+                            Color(0xFF00B0FF).copy(alpha = 0.20f),
+                            Color(0xFFE2E8F0)
+                        )
+                    )
+                }
+            }
+        } else {
+            val unselectedBorder = if (isDark) Color(0xFF1E2232) else Color(0xFFE2E8F0)
+            Brush.linearGradient(listOf(unselectedBorder, unselectedBorder))
+        }
+    }
 
     Surface(
         modifier = Modifier
@@ -636,9 +698,9 @@ private fun ServerListItem(
             .clickable { actions.select(row.guid) },
         shape = RoundedCornerShape(18.dp),
         color = cardBgColor,
-        shadowElevation = if (isSelected) 3.dp else 0.dp,
-        tonalElevation = if (isSelected) 4.dp else 0.dp,
-        border = BorderStroke(1.2.dp, cardBorderColor)
+        shadowElevation = 0.dp,
+        tonalElevation = 0.dp,
+        border = BorderStroke(if (isSelected) 1.2.dp else 1.dp, cardBorderBrush)
     ) {
         Column(
             modifier = Modifier
