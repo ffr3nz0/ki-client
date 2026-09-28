@@ -56,11 +56,13 @@ fun MainTopBar(
     val maxMenuHeight = LocalConfiguration.current.screenHeightDp.dp - statusBarHeight - navBarHeight - 20.dp
 
     val appName = stringResource(R.string.app_name)
-    val annotatedTitle = remember(appName) {
+    val isDark = com.v2ray.ang.ui.compose.LocalDarkTheme.current
+    val titleTextColor = if (isDark) Color.White else Color(0xFF1E293B)
+    val annotatedTitle = remember(appName, titleTextColor) {
         buildAnnotatedString {
             if (appName.contains("-Client", ignoreCase = true)) {
                 val idx = appName.indexOf("-Client", ignoreCase = true)
-                withStyle(SpanStyle(color = Color.White)) {
+                withStyle(SpanStyle(color = titleTextColor)) {
                     append(appName.substring(0, idx))
                 }
                 withStyle(SpanStyle(color = colorFabActive)) {
@@ -68,14 +70,14 @@ fun MainTopBar(
                 }
             } else if (appName.contains("Client", ignoreCase = true)) {
                 val idx = appName.indexOf("Client", ignoreCase = true)
-                withStyle(SpanStyle(color = Color.White)) {
+                withStyle(SpanStyle(color = titleTextColor)) {
                     append(appName.substring(0, idx))
                 }
                 withStyle(SpanStyle(color = colorFabActive)) {
                     append(appName.substring(idx))
                 }
             } else {
-                withStyle(SpanStyle(color = Color.White)) {
+                withStyle(SpanStyle(color = titleTextColor)) {
                     append(appName)
                 }
             }

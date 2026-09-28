@@ -2,6 +2,7 @@ package com.v2ray.ang.ui.main
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -11,6 +12,10 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import com.v2ray.ang.ui.compose.LocalDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -448,6 +453,57 @@ private fun ServerItemColumn(
 }
 
 @Composable
+private fun AnimatedLiveWave(
+    isRunning: Boolean,
+    tint: Color,
+    modifier: Modifier = Modifier
+) {
+    if (!isRunning) return
+    val transition = rememberInfiniteTransition(label = "liveWave")
+    val h1 by transition.animateFloat(
+        initialValue = 0.25f, targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(tween(420, easing = LinearEasing), RepeatMode.Reverse),
+        label = "h1"
+    )
+    val h2 by transition.animateFloat(
+        initialValue = 0.90f, targetValue = 0.20f,
+        animationSpec = infiniteRepeatable(tween(540, easing = LinearEasing), RepeatMode.Reverse),
+        label = "h2"
+    )
+    val h3 by transition.animateFloat(
+        initialValue = 0.30f, targetValue = 0.95f,
+        animationSpec = infiniteRepeatable(tween(620, easing = LinearEasing), RepeatMode.Reverse),
+        label = "h3"
+    )
+    val h4 by transition.animateFloat(
+        initialValue = 0.85f, targetValue = 0.35f,
+        animationSpec = infiniteRepeatable(tween(480, easing = LinearEasing), RepeatMode.Reverse),
+        label = "h4"
+    )
+    val h5 by transition.animateFloat(
+        initialValue = 0.40f, targetValue = 0.80f,
+        animationSpec = infiniteRepeatable(tween(580, easing = LinearEasing), RepeatMode.Reverse),
+        label = "h5"
+    )
+
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(2.5.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        listOf(h1, h2, h3, h4, h5).forEach { factor ->
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .height((13 * factor).dp.coerceAtLeast(3.dp))
+                    .clip(RoundedCornerShape(1.5.dp))
+                    .background(tint)
+            )
+        }
+    }
+}
+
+@Composable
 private fun ServerListItem(
     row: ServerRowUiModel,
     isSelected: Boolean,
@@ -458,6 +514,7 @@ private fun ServerListItem(
     durationSeconds: Long = 0L
 ) {
     val isItemRunning = isSelected && isRunning
+    val isDark = LocalDarkTheme.current
     val infiniteTransition = rememberInfiniteTransition(label = "serverPulse")
     val pulseScale by infiniteTransition.animateFloat(
         initialValue = 1f,
@@ -493,13 +550,24 @@ private fun ServerListItem(
         null
     }
 
+    val targetBgColor = if (isDark) {
+        if (isItemRunning) Color(0xFF0F1713) else if (isSelected) Color(0xFF131B16) else Color(0xFF13141B)
+    } else {
+        if (isItemRunning) Color(0xFFE8FDF3) else if (isSelected) Color(0xFFF0FDF4) else Color(0xFFFFFFFF)
+    }
+    val targetBorderColor = if (isDark) {
+        if (isSelected) colorFabActive.copy(alpha = 0.85f) else Color(0xFF232532)
+    } else {
+        if (isSelected) colorFabActive else Color(0xFFE2E8F0)
+    }
+
     val cardBgColor by animateColorAsState(
-        targetValue = if (isItemRunning) Color(0xFF0F1713) else if (isSelected) Color(0xFF131B16) else Color(0xFF13141B),
+        targetValue = targetBgColor,
         animationSpec = tween(250, easing = FastOutSlowInEasing),
         label = "serverCardBg"
     )
     val cardBorderColor by animateColorAsState(
-        targetValue = if (isSelected) colorFabActive.copy(alpha = 0.85f) else Color(0xFF232532),
+        targetValue = targetBorderColor,
         animationSpec = tween(250, easing = FastOutSlowInEasing),
         label = "serverCardBorder"
     )
@@ -527,20 +595,19 @@ private fun ServerListItem(
                 .padding(horizontal = 14.dp, vertical = 12.dp)
         ) {
             if (isSelected) {
-                // ROW 1: Status & Protocol / Timer badge
+                // ROW 1: Status & Center Live Wave & Timer / Protocol badge
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
-                        modifier = Modifier.weight(1f),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         if (!isItemRunning) {
                             Box(
                                 modifier = Modifier
-                                    .size(22.dp)
+                                    .size(20.dp)
                                     .clip(CircleShape)
                                     .background(colorFabActive),
                                 contentAlignment = Alignment.Center
@@ -548,23 +615,23 @@ private fun ServerListItem(
                                 Icon(
                                     painter = painterResource(R.drawable.ic_fab_check),
                                     contentDescription = null,
-                                    modifier = Modifier.size(13.dp),
+                                    modifier = Modifier.size(12.dp),
                                     tint = Color.Black
                                 )
                             }
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(7.dp))
                             val notConnectedText = stringResource(R.string.connection_not_connected)
                                 .split(".", "\n", "。").firstOrNull()?.trim().orEmpty()
                             Text(
                                 text = notConnectedText,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f) else Color(0xFF64748B),
                                 style = MaterialTheme.typography.labelMedium,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                         } else {
                             Box(
-                                modifier = Modifier.size(22.dp),
+                                modifier = Modifier.size(20.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Box(
@@ -576,12 +643,12 @@ private fun ServerListItem(
                                 )
                                 Box(
                                     modifier = Modifier
-                                        .size(9.dp)
+                                        .size(8.dp)
                                         .clip(CircleShape)
                                         .background(colorFabActive)
                                 )
                             }
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(7.dp))
                             val connectedText = stringResource(R.string.connection_connected)
                                 .split(".", "\n", "。").firstOrNull()?.trim().orEmpty()
                             Text(
@@ -593,36 +660,60 @@ private fun ServerListItem(
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
+
+                    // Center Live Equalizer Wave
                     if (isItemRunning) {
+                        AnimatedLiveWave(
+                            isRunning = true,
+                            tint = colorFabActive,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
+                    }
+
+                    // Right Timer Badge or Protocol Chip
+                    if (isItemRunning) {
+                        val timerBg = if (isDark) Color(0xFF0C2B1D) else Color(0xFFD1FAE5)
+                        val timerBorder = if (isDark) colorFabActive.copy(alpha = 0.6f) else Color(0xFF10B981)
+                        val timerText = if (isDark) colorFabActive else Color(0xFF047857)
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFF0C2B1D))
-                                .border(1.dp, colorFabActive.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
-                                .padding(horizontal = 10.dp, vertical = 3.dp),
+                                .background(timerBg)
+                                .border(1.dp, timerBorder, RoundedCornerShape(12.dp))
+                                .padding(horizontal = 9.dp, vertical = 3.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = formattedDuration,
-                                color = colorFabActive,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                fontFamily = FontFamily.Monospace,
-                                maxLines = 1
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_clock_24dp),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(12.dp),
+                                    tint = timerText
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = formattedDuration,
+                                    color = timerText,
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = FontFamily.Monospace,
+                                    maxLines = 1
+                                )
+                            }
                         }
                     } else {
+                        val protoBg = if (isDark) Color(0xFF0C2B1D) else Color(0xFFD1FAE5)
+                        val protoText = if (isDark) colorFabActive else Color(0xFF047857)
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(Color(0xFF0C2B1D))
+                                .background(protoBg)
                                 .padding(horizontal = 7.dp, vertical = 2.dp),
                             contentAlignment = Alignment.TopStart
                         ) {
                             Text(
                                 text = row.typeDescription,
-                                color = colorFabActive,
+                                color = protoText,
                                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -633,11 +724,35 @@ private fun ServerListItem(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // ROW 2: Remarks, stats/test delay, and circular Power button
+                // ROW 2: Server Icon + Remarks + Address/Stats + Circular Power Button
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Server Layers Icon
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isDark) Color(0xFF16251E) else Color(0xFFE8FDF3))
+                            .border(
+                                1.dp,
+                                if (isItemRunning) colorFabActive.copy(alpha = 0.5f)
+                                else if (isDark) Color(0xFF263930) else Color(0xFFD1FAE5),
+                                RoundedCornerShape(12.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_layers_24dp),
+                            contentDescription = null,
+                            tint = if (isItemRunning) colorFabActive else if (isDark) Color(0xFF8F94A6) else Color(0xFF059669),
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
                     Column(
                         modifier = Modifier.weight(1f)
                     ) {
@@ -647,112 +762,70 @@ private fun ServerListItem(
                                 fontWeight = FontWeight.Bold,
                                 lineBreak = LineBreak.Paragraph
                             ),
+                            color = if (isDark) Color.White else Color(0xFF0F172A),
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            if (isItemRunning) {
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(Color(0xFF0C2B1D))
-                                        .padding(horizontal = 7.dp, vertical = 2.dp),
-                                    contentAlignment = Alignment.TopStart
-                                ) {
-                                    Text(
-                                        text = row.typeDescription,
-                                        color = colorFabActive,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                            if (row.statistics.isNotBlank()) {
-                                Text(
-                                    text = row.statistics,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
-                                    fontSize = 11.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        val (testText, testColor) = if (isItemRunning && (status is MainStatus.Testing || status is MainStatus.TestProgress)) {
-                            Pair(stringResource(R.string.connection_test_testing), colorFabActive)
-                        } else if (isItemRunning && status is MainStatus.ConnectionTest) {
-                            val delay = status.result.delayMillis
-                            if (delay >= 0) {
-                                Pair("$delay ms", colorFabActive)
-                            } else {
-                                Pair(stringResource(R.string.connection_test_fail), colorPingRed)
-                            }
-                        } else if (row.testDelayMillis != 0L) {
-                            if (row.testDelayMillis < 0) {
-                                Pair(stringResource(R.string.connection_test_fail), colorPingRed)
-                            } else {
-                                Pair("${row.testDelayMillis} ms", colorFabActive)
-                            }
-                        } else {
-                            Pair(stringResource(R.string.connection_test_pending), colorFabActive)
-                        }
-
-                        Row(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .clickable { actions.testClick() }
-                                .padding(horizontal = 2.dp, vertical = 3.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_signal_cellular_alt_24dp),
-                                contentDescription = stringResource(R.string.connection_test_pending),
-                                modifier = Modifier.size(15.dp),
-                                tint = testColor
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
+                        if (row.statistics.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(3.dp))
                             Text(
-                                text = testText,
-                                color = testColor,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                text = row.statistics,
+                                color = if (isDark) Color(0xFF8F94A6) else Color(0xFF64748B),
+                                fontSize = 11.5.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
 
-                    // Circular 60dp Power Button Box
+                    // Circular 60dp Power Button Box with 3D gloss & breathing pulse
                     Box(
-                        modifier = Modifier.size(60.dp),
+                        modifier = Modifier.size(62.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         if (isItemRunning) {
                             Box(
                                 modifier = Modifier
-                                    .size(54.dp)
+                                    .size(56.dp)
                                     .scale(pulseScale)
                                     .clip(CircleShape)
-                                    .border(1.8.dp, colorFabActive.copy(alpha = pulseAlpha), CircleShape)
+                                    .border(2.dp, colorFabActive.copy(alpha = pulseAlpha), CircleShape)
                             )
                         }
                         Box(
                             modifier = Modifier
                                 .size(54.dp)
                                 .clip(CircleShape)
-                                .background(if (isItemRunning) colorFabActive else Color(0xFF222533))
+                                .background(
+                                    if (isItemRunning) colorFabActive
+                                    else if (isDark) Color(0xFF222533)
+                                    else Color(0xFFF1F5F9)
+                                )
                                 .border(
                                     width = if (isItemRunning) 0.dp else 1.2.dp,
-                                    color = if (isItemRunning) Color.Transparent else Color(0xFF333748),
+                                    color = if (isItemRunning) Color.Transparent
+                                    else if (isDark) Color(0xFF333748)
+                                    else Color(0xFFE2E8F0),
                                     shape = CircleShape
                                 )
+                                .drawWithContent {
+                                    drawContent()
+                                    // 3D Glass Lens reflection on top half
+                                    drawCircle(
+                                        brush = Brush.verticalGradient(
+                                            colors = listOf(
+                                                Color.White.copy(alpha = if (isItemRunning) 0.45f else 0.18f),
+                                                Color.Transparent
+                                            ),
+                                            startY = 0f,
+                                            endY = this.size.height * 0.55f
+                                        ),
+                                        radius = this.size.width * 0.48f,
+                                        center = Offset(this.size.width * 0.5f, this.size.height * 0.35f)
+                                    )
+                                }
                                 .clickable { actions.toggleService() },
                             contentAlignment = Alignment.Center
                         ) {
@@ -762,6 +835,123 @@ private fun ServerListItem(
                                 modifier = Modifier.size(26.dp),
                                 tint = if (isItemRunning) Color.Black else colorFabActive
                             )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // ROW 3: Cellular signal + Protocol chip + Ping delay test + Action buttons
+                val (testText, testColor) = if (isItemRunning && (status is MainStatus.Testing || status is MainStatus.TestProgress)) {
+                    Pair(stringResource(R.string.connection_test_testing), colorFabActive)
+                } else if (isItemRunning && status is MainStatus.ConnectionTest) {
+                    val delay = status.result.delayMillis
+                    if (delay >= 0) {
+                        Pair("$delay ms", colorFabActive)
+                    } else {
+                        Pair(stringResource(R.string.connection_test_fail), colorPingRed)
+                    }
+                } else if (row.testDelayMillis != 0L) {
+                    if (row.testDelayMillis < 0) {
+                        Pair(stringResource(R.string.connection_test_fail), colorPingRed)
+                    } else {
+                        Pair("${row.testDelayMillis} ms", colorFabActive)
+                    }
+                } else {
+                    Pair(stringResource(R.string.connection_test_pending), colorFabActive)
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { actions.testClick() }
+                            .padding(horizontal = 2.dp, vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_signal_cellular_alt_24dp),
+                            contentDescription = stringResource(R.string.connection_test_pending),
+                            modifier = Modifier.size(16.dp),
+                            tint = testColor
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (isDark) Color(0xFF0C2B1D) else Color(0xFFD1FAE5))
+                                .padding(horizontal = 7.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = row.typeDescription,
+                                color = if (isDark) colorFabActive else Color(0xFF047857),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = testText,
+                            color = testColor,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1
+                        )
+                    }
+
+                    // Action buttons in the footer
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val actionIconTint = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF64748B)
+                        if (doubleColumnDisplay) {
+                            IconButton(
+                                onClick = { actions.more(row.guid, row.profile) },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_more_vert_24dp),
+                                    contentDescription = stringResource(R.string.acc_more),
+                                    modifier = Modifier.size(18.dp),
+                                    tint = actionIconTint
+                                )
+                            }
+                        } else {
+                            IconButton(
+                                onClick = { actions.share(row.guid, row.profile) },
+                                modifier = Modifier.size(30.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_share_24dp),
+                                    contentDescription = stringResource(R.string.title_configuration_share),
+                                    modifier = Modifier.size(17.dp),
+                                    tint = actionIconTint
+                                )
+                            }
+                            IconButton(
+                                onClick = { actions.edit(row.guid, row.profile) },
+                                modifier = Modifier.size(30.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_edit_24dp),
+                                    contentDescription = stringResource(R.string.acc_edit),
+                                    modifier = Modifier.size(17.dp),
+                                    tint = actionIconTint
+                                )
+                            }
+                            IconButton(
+                                onClick = { actions.remove(row.guid) },
+                                modifier = Modifier.size(30.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_delete_24dp),
+                                    contentDescription = stringResource(R.string.acc_delete),
+                                    modifier = Modifier.size(17.dp),
+                                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
+                                )
+                            }
                         }
                     }
                 }
@@ -776,7 +966,7 @@ private fun ServerListItem(
                         modifier = Modifier
                             .size(20.dp)
                             .clip(CircleShape)
-                            .border(1.5.dp, Color(0xFF555869), CircleShape)
+                            .border(1.5.dp, if (isDark) Color(0xFF555869) else Color(0xFFCBD5E1), CircleShape)
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
@@ -786,6 +976,7 @@ private fun ServerListItem(
                             fontWeight = FontWeight.SemiBold,
                             lineBreak = LineBreak.Paragraph
                         ),
+                        color = if (isDark) Color.White else Color(0xFF0F172A),
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -793,13 +984,13 @@ private fun ServerListItem(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
-                            .background(Color(0xFF0C2B1D))
+                            .background(if (isDark) Color(0xFF0C2B1D) else Color(0xFFD1FAE5))
                             .padding(horizontal = 7.dp, vertical = 2.dp),
                         contentAlignment = Alignment.TopStart
                     ) {
                         Text(
                             text = row.typeDescription,
-                            color = colorFabActive,
+                            color = if (isDark) colorFabActive else Color(0xFF047857),
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -819,7 +1010,7 @@ private fun ServerListItem(
                         modifier = Modifier
                             .weight(1f)
                             .padding(start = 30.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                        color = if (isDark) Color(0xFF8F94A6) else Color(0xFF64748B),
                         style = MaterialTheme.typography.bodySmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -831,7 +1022,7 @@ private fun ServerListItem(
                         stringResource(R.string.server_test_delay_value, testDelay)
                     }
                     if (testDelayText.isNotEmpty()) {
-                        val pingColor = if (testDelay < 0L) colorPingRed else colorPing
+                        val pingColor = if (testDelay < 0L) colorPingRed else (if (isDark) colorFabActive else Color(0xFF047857))
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
@@ -849,83 +1040,84 @@ private fun ServerListItem(
                         }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-            // BOTTOM ROW: Subscription badge & action buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (row.subscriptionBadge.isNotBlank()) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(colorFabActive.copy(alpha = 0.15f))
-                            .padding(horizontal = 6.dp, vertical = 2.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = row.subscriptionBadge.uppercase(Locale.ROOT),
-                            color = colorFabActive,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                } else {
-                    Spacer(modifier = Modifier.width(1.dp))
-                }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (doubleColumnDisplay) {
-                        IconButton(
-                            onClick = { actions.more(row.guid, row.profile) },
-                            modifier = Modifier.size(32.dp)
+                // BOTTOM ROW: Subscription badge & action buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (row.subscriptionBadge.isNotBlank()) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(colorFabActive.copy(alpha = 0.15f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_more_vert_24dp),
-                                contentDescription = stringResource(R.string.acc_more),
-                                modifier = Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            Text(
+                                text = row.subscriptionBadge.uppercase(Locale.ROOT),
+                                color = if (isDark) colorFabActive else Color(0xFF047857),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     } else {
-                        IconButton(
-                            onClick = { actions.share(row.guid, row.profile) },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_share_24dp),
-                                contentDescription = stringResource(R.string.title_configuration_share),
-                                modifier = Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(4.dp))
-                        IconButton(
-                            onClick = { actions.edit(row.guid, row.profile) },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_edit_24dp),
-                                contentDescription = stringResource(R.string.acc_edit),
-                                modifier = Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(4.dp))
-                        IconButton(
-                            onClick = { actions.remove(row.guid) },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_delete_24dp),
-                                contentDescription = stringResource(R.string.acc_delete),
-                                modifier = Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
-                            )
+                        Spacer(modifier = Modifier.width(1.dp))
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val actionIconTint = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF64748B)
+                        if (doubleColumnDisplay) {
+                            IconButton(
+                                onClick = { actions.more(row.guid, row.profile) },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_more_vert_24dp),
+                                    contentDescription = stringResource(R.string.acc_more),
+                                    modifier = Modifier.size(18.dp),
+                                    tint = actionIconTint
+                                )
+                            }
+                        } else {
+                            IconButton(
+                                onClick = { actions.share(row.guid, row.profile) },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_share_24dp),
+                                    contentDescription = stringResource(R.string.title_configuration_share),
+                                    modifier = Modifier.size(18.dp),
+                                    tint = actionIconTint
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
+                            IconButton(
+                                onClick = { actions.edit(row.guid, row.profile) },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_edit_24dp),
+                                    contentDescription = stringResource(R.string.acc_edit),
+                                    modifier = Modifier.size(18.dp),
+                                    tint = actionIconTint
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
+                            IconButton(
+                                onClick = { actions.remove(row.guid) },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_delete_24dp),
+                                    contentDescription = stringResource(R.string.acc_delete),
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
+                                )
+                            }
                         }
                     }
                 }

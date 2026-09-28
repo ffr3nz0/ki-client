@@ -4,13 +4,19 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import com.v2ray.ang.ui.compose.LocalDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -129,13 +135,71 @@ fun SubscriptionUserinfoCard(
     val daysLeft = diffMillis / (1000L * 60 * 60 * 24)
     val hoursLeft = (diffMillis / (1000L * 60 * 60)) % 24
 
-    val cardBorderBrush = Brush.linearGradient(
-        colors = listOf(
-            colorFabActive.copy(alpha = 0.50f),
-            Color(0xFF00B0FF).copy(alpha = 0.25f),
-            Color(0x22FFFFFF)
-        )
+    val isDark = LocalDarkTheme.current
+
+    val infiniteTransition = rememberInfiniteTransition(label = "subCardAnim")
+    val shimmerOffset by infiniteTransition.animateFloat(
+        initialValue = -0.5f,
+        targetValue = 1.5f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2400, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmerFlow"
     )
+    val animatedProgress by animateFloatAsState(
+        targetValue = progress,
+        animationSpec = tween(durationMillis = 850, easing = FastOutSlowInEasing),
+        label = "subProgress"
+    )
+
+    val cardBorderBrush = Brush.linearGradient(
+        if (isDark) {
+            listOf(
+                colorFabActive.copy(alpha = 0.50f),
+                Color(0xFF00B0FF).copy(alpha = 0.25f),
+                Color(0x22FFFFFF)
+            )
+        } else {
+            listOf(
+                colorFabActive.copy(alpha = 0.40f),
+                Color(0xFF00B0FF).copy(alpha = 0.20f),
+                Color(0xFFE2E8F0)
+            )
+        }
+    )
+
+    val cardBg = if (isDark) Color(0xFF12141D) else Color(0xFFFFFFFF)
+    val titleColor = if (isDark) Color.White else Color(0xFF0F172A)
+    val subtitleColor = if (isDark) Color(0xFF8F94A6) else Color(0xFF64748B)
+    val usedValueColor = if (isDark) Color.White else Color(0xFF0F172A)
+    val slashColor = if (isDark) Color(0xFF555B6E) else Color(0xFF94A3B8)
+    val totalColor = if (hasTotal) (if (isDark) Color(0xFFB0B4C3) else Color(0xFF475569)) else colorFabActive
+    val progressTrackBg = if (isDark) Color(0xFF1E2230) else Color(0xFFE2E8F0)
+
+    val chipTextPrimary = if (isDark) Color.White else Color(0xFF0F172A)
+    val chipTextSecondary = if (isDark) Color(0xFF8F94A6) else Color(0xFF64748B)
+
+    val uploadChipBg = if (isDark) Color(0x1200B0FF) else Color(0x0C00B0FF)
+    val uploadChipBorder = if (isDark) Color(0x3000B0FF) else Color(0x2200B0FF)
+
+    val downloadChipBg = if (isDark) Color(0x1200E676) else Color(0x0C00E676)
+    val downloadChipBorder = if (isDark) Color(0x3000E676) else Color(0x2200E676)
+
+    val supportBtnBg = if (isDark) Color(0x1800B0FF) else Color(0x1000B0FF)
+    val supportBtnBorder = if (isDark) Color(0x4000B0FF) else Color(0x3000B0FF)
+    val supportBtnText = if (isDark) Color(0xFFE1F5FE) else Color(0xFF0369A1)
+    val supportBtnIcon = if (isDark) Color(0xFF00B0FF) else Color(0xFF0284C7)
+
+    val noticeBtnBg = if (isDark) Color(0x18FFB300) else Color(0x10FFB300)
+    val noticeBtnBorder = if (isDark) Color(0x45FFB300) else Color(0x30FFB300)
+    val noticeBtnText = if (isDark) Color(0xFFFFF8E1) else Color(0xFFB45309)
+    val noticeBtnIcon = if (isDark) Color(0xFFFFB300) else Color(0xFFD97706)
+
+    val refreshBtnBg = if (isDark) Color(0x1800E676) else Color(0x1000E676)
+    val refreshBtnBorder = if (isDark) colorFabActive.copy(alpha = 0.40f) else Color(0x3000E676)
+    val refreshBtnText = if (isDark) Color(0xFFE8F5E9) else Color(0xFF047857)
+    val refreshBtnIcon = if (isDark) colorFabActive else Color(0xFF059669)
 
     Surface(
         modifier = modifier
@@ -143,7 +207,7 @@ fun SubscriptionUserinfoCard(
             .clip(RoundedCornerShape(22.dp))
             .border(BorderStroke(1.2.dp, cardBorderBrush), RoundedCornerShape(22.dp)),
         shape = RoundedCornerShape(22.dp),
-        color = Color(0xFF12141D),
+        color = cardBg,
         shadowElevation = 4.dp,
         tonalElevation = 3.dp
     ) {
@@ -183,7 +247,7 @@ fun SubscriptionUserinfoCard(
                             text = subscription.remarks.ifBlank { stringResource(R.string.title_sub_setting) },
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White,
+                            color = titleColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -191,7 +255,7 @@ fun SubscriptionUserinfoCard(
                             Text(
                                 text = Utils.formatTimestamp(subscription.lastUpdated, "MM/dd HH:mm"),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFF8F94A6),
+                                color = subtitleColor,
                                 fontSize = 11.sp
                             )
                         }
@@ -255,7 +319,7 @@ fun SubscriptionUserinfoCard(
                     Text(
                         text = stringResource(R.string.sub_info_used),
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFF8F94A6),
+                        color = subtitleColor,
                         fontSize = 11.sp
                     )
                     Spacer(modifier = Modifier.height(2.dp))
@@ -264,21 +328,21 @@ fun SubscriptionUserinfoCard(
                             text = formatTraffic(usedTraffic),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.ExtraBold,
-                            color = Color.White,
+                            color = usedValueColor,
                             fontSize = 22.sp
                         )
                         Text(
                             text = " / ",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF555B6E),
+                            color = slashColor,
                             modifier = Modifier.padding(bottom = 2.dp)
                         )
                         Text(
                             text = if (hasTotal) formatTraffic(totalTraffic) else stringResource(R.string.sub_info_unlimited),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = if (hasTotal) Color(0xFFB0B4C3) else colorFabActive,
+                            color = totalColor,
                             fontSize = 14.sp,
                             modifier = Modifier.padding(bottom = 2.dp)
                         )
@@ -306,7 +370,7 @@ fun SubscriptionUserinfoCard(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // ROW 3: Progress Bar
+            // ROW 3: Progress Bar with Animated Shimmer
             val progressBrush = if (hasTotal) {
                 Brush.horizontalGradient(
                     colors = listOf(
@@ -329,15 +393,32 @@ fun SubscriptionUserinfoCard(
                     .fillMaxWidth()
                     .height(8.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(Color(0xFF1E2230))
+                    .background(progressTrackBg)
             ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth(fraction = progress)
+                        .fillMaxWidth(fraction = animatedProgress)
                         .height(8.dp)
                         .clip(RoundedCornerShape(4.dp))
                         .background(progressBrush)
-                )
+                ) {
+                    // Shimmer wave overlay
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(
+                                        Color.Transparent,
+                                        Color.White.copy(alpha = 0.38f),
+                                        Color.Transparent
+                                    ),
+                                    startX = (shimmerOffset - 0.2f) * 600f,
+                                    endX = (shimmerOffset + 0.3f) * 600f
+                                )
+                            )
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -352,8 +433,8 @@ fun SubscriptionUserinfoCard(
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0x1200B0FF))
-                        .border(1.dp, Color(0x3000B0FF), RoundedCornerShape(12.dp))
+                        .background(uploadChipBg)
+                        .border(1.dp, uploadChipBorder, RoundedCornerShape(12.dp))
                         .padding(horizontal = 10.dp, vertical = 8.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -368,14 +449,14 @@ fun SubscriptionUserinfoCard(
                             Text(
                                 text = stringResource(R.string.sub_info_upload),
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color(0xFF8F94A6),
+                                color = chipTextSecondary,
                                 fontSize = 10.sp
                             )
                             Text(
                                 text = formatTraffic(subscription.uploadTraffic),
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White,
+                                color = chipTextPrimary,
                                 fontSize = 12.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -389,8 +470,8 @@ fun SubscriptionUserinfoCard(
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0x1200E676))
-                        .border(1.dp, Color(0x3000E676), RoundedCornerShape(12.dp))
+                        .background(downloadChipBg)
+                        .border(1.dp, downloadChipBorder, RoundedCornerShape(12.dp))
                         .padding(horizontal = 10.dp, vertical = 8.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -405,14 +486,14 @@ fun SubscriptionUserinfoCard(
                             Text(
                                 text = stringResource(R.string.sub_info_download),
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color(0xFF8F94A6),
+                                color = chipTextSecondary,
                                 fontSize = 10.sp
                             )
                             Text(
                                 text = formatTraffic(subscription.downloadTraffic),
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White,
+                                color = chipTextPrimary,
                                 fontSize = 12.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -442,8 +523,8 @@ fun SubscriptionUserinfoCard(
                             .weight(1f)
                             .height(38.dp),
                         shape = RoundedCornerShape(12.dp),
-                        color = Color(0x1800B0FF),
-                        border = BorderStroke(1.dp, Color(0x4000B0FF)),
+                        color = supportBtnBg,
+                        border = BorderStroke(1.dp, supportBtnBorder),
                         onClick = { launchUrlSafely(context, supportTarget) }
                     ) {
                         Row(
@@ -456,7 +537,7 @@ fun SubscriptionUserinfoCard(
                             Icon(
                                 painter = painterResource(if (isTelegram) R.drawable.ic_telegram_24dp else R.drawable.ic_feedback_24dp),
                                 contentDescription = stringResource(R.string.sub_info_support),
-                                tint = Color(0xFF00B0FF),
+                                tint = supportBtnIcon,
                                 modifier = Modifier.size(15.dp)
                             )
                             Spacer(modifier = Modifier.width(5.dp))
@@ -464,7 +545,7 @@ fun SubscriptionUserinfoCard(
                                 text = stringResource(R.string.sub_info_support),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFFE1F5FE),
+                                color = supportBtnText,
                                 fontSize = 11.5.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -479,8 +560,8 @@ fun SubscriptionUserinfoCard(
                             .weight(1f)
                             .height(38.dp),
                         shape = RoundedCornerShape(12.dp),
-                        color = Color(0x18FFB300),
-                        border = BorderStroke(1.dp, Color(0x45FFB300)),
+                        color = noticeBtnBg,
+                        border = BorderStroke(1.dp, noticeBtnBorder),
                         onClick = { showAnnounceDialog = true }
                     ) {
                         Row(
@@ -493,7 +574,7 @@ fun SubscriptionUserinfoCard(
                             Icon(
                                 painter = painterResource(R.drawable.ic_promotion_24dp),
                                 contentDescription = stringResource(R.string.sub_info_announcement),
-                                tint = Color(0xFFFFB300),
+                                tint = noticeBtnIcon,
                                 modifier = Modifier.size(15.dp)
                             )
                             Spacer(modifier = Modifier.width(5.dp))
@@ -501,7 +582,7 @@ fun SubscriptionUserinfoCard(
                                 text = stringResource(R.string.sub_info_announcement),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFFFFF8E1),
+                                color = noticeBtnText,
                                 fontSize = 11.5.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -516,8 +597,8 @@ fun SubscriptionUserinfoCard(
                         .weight(1f)
                         .height(38.dp),
                     shape = RoundedCornerShape(12.dp),
-                    color = Color(0x1800E676),
-                    border = BorderStroke(1.dp, colorFabActive.copy(alpha = 0.40f)),
+                    color = refreshBtnBg,
+                    border = BorderStroke(1.dp, refreshBtnBorder),
                     onClick = {
                         refreshRotationAngle += 360f
                         onRefresh()
@@ -533,7 +614,7 @@ fun SubscriptionUserinfoCard(
                         Icon(
                             painter = painterResource(R.drawable.ic_restore_24dp),
                             contentDescription = stringResource(R.string.sub_info_refresh),
-                            tint = colorFabActive,
+                            tint = refreshBtnIcon,
                             modifier = Modifier
                                 .size(15.dp)
                                 .rotate(animatedRotation)
@@ -543,7 +624,7 @@ fun SubscriptionUserinfoCard(
                             text = stringResource(R.string.sub_info_refresh),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFFE8F5E9),
+                            color = refreshBtnText,
                             fontSize = 11.5.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -570,7 +651,7 @@ fun SubscriptionUserinfoCard(
                     Text(
                         text = stringResource(R.string.sub_info_announcement),
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = titleColor
                     )
                 }
             },
@@ -578,7 +659,7 @@ fun SubscriptionUserinfoCard(
                 Text(
                     text = subscription.announceMsg.orEmpty(),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFFECEFF1),
+                    color = if (isDark) Color(0xFFECEFF1) else Color(0xFF334155),
                     lineHeight = 22.sp
                 )
             },
@@ -591,7 +672,7 @@ fun SubscriptionUserinfoCard(
                     )
                 }
             },
-            containerColor = Color(0xFF161924),
+            containerColor = if (isDark) Color(0xFF161924) else Color(0xFFFFFFFF),
             shape = RoundedCornerShape(18.dp)
         )
     }

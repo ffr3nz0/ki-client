@@ -100,16 +100,46 @@ private fun GroupTabPill(
 ) {
     val servers by serverFlow.collectAsStateWithLifecycle()
 
+    val isDark = com.v2ray.ang.ui.compose.LocalDarkTheme.current
+    val targetBgColor = if (isDark) {
+        if (selected) Color(0xFF0C2216) else Color(0xFF14161F)
+    } else {
+        if (selected) Color(0xFFD1FAE5) else Color(0xFFF1F5F9)
+    }
+    val targetBorderColor = if (isDark) {
+        if (selected) colorFabActive else Color(0xFF2C2F3A)
+    } else {
+        if (selected) colorFabActive else Color(0xFFE2E8F0)
+    }
+    val textColor = if (isDark) {
+        if (selected) colorFabActive else Color(0xFFB5B5C3)
+    } else {
+        if (selected) Color(0xFF047857) else Color(0xFF475569)
+    }
+    val counterBg = if (isDark) {
+        if (selected) colorFabActive.copy(alpha = 0.22f) else Color(0xFF242735)
+    } else {
+        if (selected) colorFabActive.copy(alpha = 0.25f) else Color(0xFFE2E8F0)
+    }
+    val counterText = if (isDark) {
+        if (selected) colorFabActive else Color(0xFF8E8E93)
+    } else {
+        if (selected) Color(0xFF047857) else Color(0xFF64748B)
+    }
+    val iconTint = if (isDark) {
+        if (selected) colorFabActive else Color(0xFF7E8299)
+    } else {
+        if (selected) Color(0xFF047857) else Color(0xFF64748B)
+    }
+
     val bgColor by animateColorAsState(
-        targetValue = if (selected) Color(0xFF0C2216)
-        else Color(0xFF14161F),
+        targetValue = targetBgColor,
         animationSpec = tween(220, easing = FastOutSlowInEasing),
         label = "pillBg"
     )
 
     val borderColor by animateColorAsState(
-        targetValue = if (selected) colorFabActive
-        else Color(0xFF2C2F3A),
+        targetValue = targetBorderColor,
         animationSpec = tween(220, easing = FastOutSlowInEasing),
         label = "pillBorder"
     )
@@ -134,7 +164,7 @@ private fun GroupTabPill(
                 Icon(
                     painter = painterResource(R.drawable.ic_subscriptions_24dp),
                     contentDescription = null,
-                    tint = if (selected) colorFabActive else Color(0xFF7E8299),
+                    tint = iconTint,
                     modifier = Modifier.size(15.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
@@ -146,7 +176,7 @@ private fun GroupTabPill(
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                     fontSize = 13.sp
                 ),
-                color = if (selected) colorFabActive else Color(0xFFB5B5C3),
+                color = textColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -156,10 +186,7 @@ private fun GroupTabPill(
             Box(
                 modifier = Modifier
                     .clip(CircleShape)
-                    .background(
-                        if (selected) colorFabActive.copy(alpha = 0.22f)
-                        else Color(0xFF242735)
-                    )
+                    .background(counterBg)
                     .padding(horizontal = 7.dp, vertical = 2.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -167,7 +194,7 @@ private fun GroupTabPill(
                     text = "${servers.size}",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (selected) colorFabActive else Color(0xFF8E8E93)
+                    color = counterText
                 )
             }
         }
