@@ -570,4 +570,11 @@
     <string name="value_unknown">không xác định</string>
     <string name="toast_dns_cache_cleared">Đã xóa bộ nhớ đệm DNS IP, đang phân giải lại tên miền…</string>
 
+    <string name="smart_auto_select">Tự động chọn máy chủ nhanh nhất</string>
+    <string name="smart_auto_select_success">Đã kết nối với máy chủ nhanh nhất: %1$s (%2$d ms)</string>
+    <string name="smart_auto_select_no_server">Không tìm thấy máy chủ khả dụng</string>
+    <string name="lan_share_title">Chia sẻ qua Hotspot / LAN</string>
+    <string name="lan_share_desc">Kết nối các thiết bị khác (TV, PC, Console) vào Hotspot/Wi-Fi của điện thoại này và đặt proxy:</string>
+    <string name="lan_share_copied">Đã sao chép vào khay nhớ tạm</string>
+
 </resources>

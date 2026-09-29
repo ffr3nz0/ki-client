@@ -275,6 +275,10 @@ class MainViewModel(
                 _uiState.update { it.copy(shareQRCodeBitmap = null) }
             }
 
+            MainAction.SmartAutoSelect -> smartAutoSelect()
+            MainAction.OpenLanShare -> _uiState.update { it.copy(showLanShareDialog = true) }
+            MainAction.DismissLanShare -> _uiState.update { it.copy(showLanShareDialog = false) }
+
             MainAction.ToggleService,
             MainAction.TestCurrentServer,
             MainAction.ImportQRcode,
@@ -766,6 +770,7 @@ class MainViewModel(
     fun updateSelectedGuid(guid: String) {
         dataSource.setSelectServer(guid)
         _uiState.update { it.copy(selectedGuid = guid) }
+        com.v2ray.ang.receiver.WidgetProvider.updateWidget(com.v2ray.ang.AngApplication.application)
         viewModelScope.launch(ioDispatcher) {
             val profile = dataSource.decodeServerConfig(guid)
             val server = profile?.server.orEmpty()
@@ -897,9 +902,40 @@ class MainViewModel(
         }
     }
 
+    private var pendingAutoSelectAfterTest = false
+
+    fun smartAutoSelect() {
+        val groupId = uiState.value.selectedGroupId
+        val currentServers = mutableServerGroupState(groupId).value.servers
+        val workingServers = currentServers.filter { it.testDelayMillis > 0L }
+
+        if (workingServers.isNotEmpty()) {
+            val best = workingServers.minByOrNull { it.testDelayMillis }!!
+            applyBestServer(best)
+        } else {
+            pendingAutoSelectAfterTest = true
+            testAllRealPing(onlyTcp = false)
+            toast(dataSource.getString(R.string.connection_test_testing))
+        }
+    }
+
+    private fun applyBestServer(best: ServersCache) {
+        updateSelectedGuid(best.guid)
+        if (uiState.value.isRunning) {
+            com.v2ray.ang.core.LauncherManager.restartService(com.v2ray.ang.AngApplication.application)
+        }
+        val msg = dataSource.getString(
+            R.string.smart_auto_select_success,
+            best.profile.remarks,
+            best.testDelayMillis.toInt()
+        )
+        toast(msg)
+    }
+
     private fun onTestsFinished() {
         viewModelScope.launch(ioDispatcher) {
             cacheMutex.withLock { groupDataCache.clear() }
+            val completedGroupId = testingGroupId
             testingGroupId = null
             _uiState.update {
                 it.copy(
@@ -908,6 +944,19 @@ class MainViewModel(
                 )
             }
             reloadAllGroups(_uiState.value.groups.map { it.id })
+
+            if (pendingAutoSelectAfterTest && completedGroupId != null) {
+                pendingAutoSelectAfterTest = false
+                val servers = loadGroup(completedGroupId, forceRefresh = true)
+                val best = servers.filter { it.testDelayMillis > 0L }.minByOrNull { it.testDelayMillis }
+                withContext(Dispatchers.Main) {
+                    if (best != null) {
+                        applyBestServer(best)
+                    } else {
+                        toastError(R.string.smart_auto_select_no_server)
+                    }
+                }
+            }
         }
     }
 

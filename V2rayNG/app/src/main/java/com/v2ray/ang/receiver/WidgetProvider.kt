@@ -36,21 +36,54 @@ class WidgetProvider : AppWidgetProvider() {
      */
     private fun updateWidgetBackground(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray, isRunning: Boolean) {
         val remoteViews = RemoteViews(context.packageName, R.layout.widget_switch)
-        val intent = Intent(context, WidgetProvider::class.java)
-        intent.action = AppConfig.BROADCAST_ACTION_WIDGET_CLICK
-        val pendingIntent = PendingIntent.getBroadcast(
+
+        // Toggle service intent for power button
+        val toggleIntent = Intent(context, WidgetProvider::class.java).apply {
+            action = AppConfig.BROADCAST_ACTION_WIDGET_CLICK
+        }
+        val togglePendingIntent = PendingIntent.getBroadcast(
             context,
-            R.id.layout_switch,
-            intent,
+            R.id.layout_background,
+            toggleIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
-        remoteViews.setOnClickPendingIntent(R.id.layout_switch, pendingIntent)
+        remoteViews.setOnClickPendingIntent(R.id.layout_background, togglePendingIntent)
+
+        // Open app intent when clicking the card body
+        val openAppIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+        if (openAppIntent != null) {
+            val openAppPendingIntent = PendingIntent.getActivity(
+                context,
+                0,
+                openAppIntent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
+            remoteViews.setOnClickPendingIntent(R.id.layout_switch, openAppPendingIntent)
+        }
+
+        // Get currently selected server remarks
+        val selectedGuid = com.v2ray.ang.handler.MmkvManager.getSelectServer()
+        val serverConfig = selectedGuid?.let { com.v2ray.ang.handler.MmkvManager.decodeServerConfig(it) }
+        val serverName = serverConfig?.remarks?.takeIf { it.isNotBlank() }
+            ?: context.getString(R.string.app_name)
+
+        remoteViews.setTextViewText(R.id.text_server, serverName)
+
         if (isRunning) {
+            val connectedLabel = context.getString(R.string.connection_connected).split('.').firstOrNull()?.trim()
+                ?: "Connected"
+            remoteViews.setTextViewText(R.id.text_status, "● $connectedLabel")
+            remoteViews.setTextColor(R.id.text_status, android.graphics.Color.parseColor("#10B981"))
+            remoteViews.setInt(R.id.text_status, "setBackgroundResource", R.drawable.widget_status_pill_active)
             remoteViews.setInt(R.id.image_switch, "setImageResource", R.drawable.ic_stop_24dp)
-            remoteViews.setInt(R.id.layout_background, "setBackgroundResource", R.drawable.ic_rounded_corner_active)
+            remoteViews.setInt(R.id.layout_background, "setBackgroundResource", R.drawable.widget_power_active)
         } else {
+            val notConnectedLabel = context.getString(R.string.connection_not_connected)
+            remoteViews.setTextViewText(R.id.text_status, "○ $notConnectedLabel")
+            remoteViews.setTextColor(R.id.text_status, android.graphics.Color.parseColor("#94A3B8"))
+            remoteViews.setInt(R.id.text_status, "setBackgroundResource", R.drawable.widget_status_pill_inactive)
             remoteViews.setInt(R.id.image_switch, "setImageResource", R.drawable.ic_play_24dp)
-            remoteViews.setInt(R.id.layout_background, "setBackgroundResource", R.drawable.ic_rounded_corner_inactive)
+            remoteViews.setInt(R.id.layout_background, "setBackgroundResource", R.drawable.widget_power_inactive)
         }
 
         for (appWidgetId in appWidgetIds) {
@@ -90,6 +123,17 @@ class WidgetProvider : AppWidgetProvider() {
                         )
                     }
                 }
+            }
+        }
+    }
+
+    companion object {
+        fun updateWidget(context: Context) {
+            val manager = AppWidgetManager.getInstance(context) ?: return
+            val ids = manager.getAppWidgetIds(ComponentName(context, WidgetProvider::class.java))
+            if (ids.isNotEmpty()) {
+                val provider = WidgetProvider()
+                provider.updateWidgetBackground(context, manager, ids, CoreServiceManager.isRunning())
             }
         }
     }

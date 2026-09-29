@@ -576,4 +576,11 @@
     <string name="value_unknown">неизвестно</string>
     <string name="toast_dns_cache_cleared">Кэш DNS IP очищен, повторное разрешение домена…</string>
 
+    <string name="smart_auto_select">Умный выбор самого быстрого сервера</string>
+    <string name="smart_auto_select_success">Подключено к быстрейшему серверу: %1$s (%2$d мс)</string>
+    <string name="smart_auto_select_no_server">Рабочих серверов не найдено</string>
+    <string name="lan_share_title">Раздача по Wi-Fi / Hotspot</string>
+    <string name="lan_share_desc">Подключите другие устройства (ТВ, ПК, консоль) к точке доступа этого телефона и настройте прокси:</string>
+    <string name="lan_share_copied">Скопировано в буфер обмена</string>
+
 </resources>

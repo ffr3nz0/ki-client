@@ -570,4 +570,11 @@
     <string name="value_unknown">未知</string>
     <string name="toast_dns_cache_cleared">DNS IP 快取已清除，正在重新解析網域名稱…</string>
 
+    <string name="smart_auto_select">智慧選擇最快節點</string>
+    <string name="smart_auto_select_success">已連線到最快節點: %1$s (%2$d 毫秒)</string>
+    <string name="smart_auto_select_no_server">未找到可用節點</string>
+    <string name="lan_share_title">區域網路/熱點代理共享</string>
+    <string name="lan_share_desc">將其他設備（電視、電腦、遊戲機）連接到此手機的熱點/區域網路並設定代理：</string>
+    <string name="lan_share_copied">已複製到剪貼簿</string>
+
 </resources>

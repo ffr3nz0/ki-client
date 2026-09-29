@@ -572,4 +572,11 @@
     <string name="value_unknown">অজানা</string>
     <string name="toast_dns_cache_cleared">DNS IP ক্যাশে মুছে ফেলা হয়েছে, পুনরায় রেজলভ করা হচ্ছে…</string>
 
+    <string name="smart_auto_select">স্মার্ট দ্রুততম সার্ভার নির্বাচন</string>
+    <string name="smart_auto_select_success">দ্রুততম সার্ভারে সংযুক্ত: %1$s (%2$d ms)</string>
+    <string name="smart_auto_select_no_server">কোনো উপলব্ধ সার্ভার পাওয়া যায়নি</string>
+    <string name="lan_share_title">হটস্পট / ল্যান শেয়ার</string>
+    <string name="lan_share_desc">অন্যান্য ডিভাইস (টিভি, পিসি, কনসোল) এই ফোনের হটস্পট/ওয়াইফাইয়ে যুক্ত করুন এবং প্রক্সি সেট করুন:</string>
+    <string name="lan_share_copied">ক্লিপবোর্ডে কপি করা হয়েছে</string>
+
 </resources>

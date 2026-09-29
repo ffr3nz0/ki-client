@@ -588,5 +588,11 @@
     <string name="sub_info_upload">Upload</string>
     <string name="sub_info_download">Download</string>
     <string name="toast_dns_cache_cleared">DNS IP cache cleared, re-resolving domain…</string>
+    <string name="smart_auto_select">Smart Auto-Select</string>
+    <string name="smart_auto_select_success">Connected to fastest server: %1$s (%2$d ms)</string>
+    <string name="smart_auto_select_no_server">No working server found</string>
+    <string name="lan_share_title">Share via Hotspot / LAN</string>
+    <string name="lan_share_desc">Connect other devices (TV, PC, Console) to this phone\'s Hotspot/Wi-Fi and set proxy:</string>
+    <string name="lan_share_copied">Copied to clipboard</string>
 
 </resources>

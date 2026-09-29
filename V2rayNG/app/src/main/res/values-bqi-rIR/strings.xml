@@ -572,4 +572,11 @@
     <string name="value_unknown">نا مؽخص</string>
     <string name="toast_dns_cache_cleared">کش IP دامین‌ها پاکسازی بی، در حال گردن نوسخه جدید…</string>
 
+    <string name="smart_auto_select">اتصال هوشمند به سریع‌ترین سرور</string>
+    <string name="smart_auto_select_success">اتصال به سریع‌ترین سرور: %1$s (%2$d میلی‌ثانیه)</string>
+    <string name="smart_auto_select_no_server">هیچ سرور فعالی یافت نشد</string>
+    <string name="lan_share_title">اشتراک با هات‌اسپات (LAN Share)</string>
+    <string name="lan_share_desc">دستگاه‌های دیگر (تلویزیون، لپ‌تاپ، کنسول) را به هات‌اسپات این گوشی وصل کرده و پروکسی دستی تنظیم کنید:</string>
+    <string name="lan_share_copied">در کلیپ‌بورد کپی شد</string>
+
 </resources>

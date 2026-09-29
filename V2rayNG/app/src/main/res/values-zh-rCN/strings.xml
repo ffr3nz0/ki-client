@@ -570,4 +570,11 @@
     <string name="value_unknown">未知</string>
     <string name="toast_dns_cache_cleared">DNS IP 缓存已清除，正在重新解析域名…</string>
 
+    <string name="smart_auto_select">智能选择最快节点</string>
+    <string name="smart_auto_select_success">已连接到最快节点: %1$s (%2$d 毫秒)</string>
+    <string name="smart_auto_select_no_server">未找到可用节点</string>
+    <string name="lan_share_title">局域网/热点代理共享</string>
+    <string name="lan_share_desc">将其他设备（电视、电脑、游戏机）连接到此手机的热点/局域网并设置代理：</string>
+    <string name="lan_share_copied">已复制到剪贴板</string>
+
 </resources>

@@ -49,6 +49,7 @@ import com.v2ray.ang.handler.AppUpdateInfo
 import com.v2ray.ang.handler.AppUpdateManager
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.ui.compose.InAppUpdateDialog
+import com.v2ray.ang.ui.compose.LanShareDialog
 import com.v2ray.ang.ui.compose.QRCodeDialog
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -163,6 +164,9 @@ fun MainScreen(
     if (shareQRCodeBitmap != null) {
         QRCodeDialog(bitmap = shareQRCodeBitmap, onDismiss = { onAction(MainAction.DismissQRCodeDialog) })
     }
+    if (uiState.showLanShareDialog) {
+        LanShareDialog(onDismiss = { onAction(MainAction.DismissLanShare) })
+    }
 
     var updateInfoToPrompt by remember { mutableStateOf<AppUpdateInfo?>(null) }
     LaunchedEffect(Unit) {
@@ -217,6 +221,8 @@ fun MainScreen(
                     onAction = onAction,
                     onMoreMenuAction = { moreAction ->
                         when (moreAction) {
+                            MainMoreMenuAction.SmartAutoSelect -> onAction(MainAction.SmartAutoSelect)
+                            MainMoreMenuAction.ShareLan -> onAction(MainAction.OpenLanShare)
                             MainMoreMenuAction.RestartService -> onAction(MainAction.RestartService)
                             MainMoreMenuAction.DeleteAll -> showDelAllConfirm = true
                             MainMoreMenuAction.DeleteDuplicate -> showDelDuplicateConfirm = true
