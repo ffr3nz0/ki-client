@@ -2,6 +2,7 @@ package com.v2ray.ang.handler
 
 import android.content.Context
 import com.v2ray.ang.AppConfig
+import com.v2ray.ang.core.CoreServiceManager
 import com.v2ray.ang.core.LauncherManager
 import com.v2ray.ang.util.LogUtil
 import kotlinx.coroutines.Dispatchers
@@ -16,6 +17,8 @@ import java.net.Socket
 
 object DnsSelectorManager {
     private const val TAG = "DnsSelectorManager"
+    private var lastScanTimestamp = 0L
+    private const val SCAN_COOLDOWN_MS = 3 * 60 * 1000L // 3 minutes cooldown
 
     data class DnsPreset(
         val id: String,
@@ -26,6 +29,7 @@ object DnsSelectorManager {
         val domesticIp: String = primaryIp
     )
 
+    // Exclusively fast, reliable international/foreign DNS resolvers
     val PRESETS: List<DnsPreset> = listOf(
         DnsPreset(
             id = "cloudflare",
@@ -60,33 +64,34 @@ object DnsSelectorManager {
             domesticIp = "208.67.222.222"
         ),
         DnsPreset(
-            id = "shecan",
-            displayName = "Shecan / شکن (178.22.122.100)",
-            primaryIp = "178.22.122.100",
-            secondaryIp = "185.51.200.2",
-            domesticIp = "178.22.122.100"
-        ),
-        DnsPreset(
-            id = "electro",
-            displayName = "Electro / الکترو (78.157.42.101)",
-            primaryIp = "78.157.42.101",
-            secondaryIp = "78.157.42.100",
-            domesticIp = "78.157.42.101"
-        ),
-        DnsPreset(
-            id = "radar",
-            displayName = "Radar Game / رادار (10.202.10.10)",
-            primaryIp = "10.202.10.10",
-            secondaryIp = "10.202.10.11",
-            domesticIp = "10.202.10.10"
-        ),
-        DnsPreset(
             id = "adguard",
             displayName = "AdGuard DNS (94.140.14.14)",
             primaryIp = "94.140.14.14",
             secondaryIp = "94.140.15.15",
             dohUrl = "https://dns.adguard-dns.com/dns-query",
             domesticIp = "94.140.14.14"
+        ),
+        DnsPreset(
+            id = "controld",
+            displayName = "Control D (76.76.2.0)",
+            primaryIp = "76.76.2.0",
+            secondaryIp = "76.76.10.0",
+            dohUrl = "https://freedns.controld.com/p0",
+            domesticIp = "76.76.2.0"
+        ),
+        DnsPreset(
+            id = "dnswatch",
+            displayName = "DNS.WATCH (84.200.69.80)",
+            primaryIp = "84.200.69.80",
+            secondaryIp = "84.200.70.40",
+            domesticIp = "84.200.69.80"
+        ),
+        DnsPreset(
+            id = "level3",
+            displayName = "Level3 / Lumen (4.2.2.4)",
+            primaryIp = "4.2.2.4",
+            secondaryIp = "4.2.2.2",
+            domesticIp = "4.2.2.4"
         ),
         DnsPreset(
             id = "yandex",
@@ -159,7 +164,7 @@ object DnsSelectorManager {
     }
 
     /**
-     * Benchmarks all candidate presets concurrently.
+     * Benchmarks all foreign presets concurrently.
      */
     suspend fun testAllPresets(timeoutMs: Int = 1400): List<Pair<DnsPreset, Long>> = withContext(Dispatchers.IO) {
         PRESETS.map { preset ->
@@ -193,15 +198,15 @@ object DnsSelectorManager {
         MmkvManager.encodeSettings(AppConfig.PREF_DOMESTIC_DNS, preset.domesticIp)
         MmkvManager.encodeSettings(AppConfig.PREF_DNS_SELECTOR_MODE, preset.id)
 
-        LogUtil.i(TAG, "Applied DNS preset '${preset.displayName}': remote=$remoteVal, vpn=$vpnVal, domestic=${preset.domesticIp}")
+        LogUtil.i(TAG, "Applied foreign DNS preset '${preset.displayName}': remote=$remoteVal, vpn=$vpnVal, domestic=${preset.domesticIp}")
 
-        if (context != null) {
+        if (context != null && CoreServiceManager.isRunning()) {
             LauncherManager.restartService(context)
         }
     }
 
     /**
-     * Finds the fastest reachable DNS on the current network and applies it.
+     * Finds the fastest reachable foreign DNS on the current network and applies it.
      */
     suspend fun autoSelectBestDns(context: Context?): Pair<DnsPreset, Long>? = withContext(Dispatchers.IO) {
         val results = testAllPresets()
@@ -211,25 +216,53 @@ object DnsSelectorManager {
         if (best != null) {
             applyPreset(context, best.first)
             MmkvManager.encodeSettings(AppConfig.PREF_DNS_SELECTOR_MODE, "auto")
-            LogUtil.i(TAG, "Auto-selected best DNS '${best.first.displayName}' with ${best.second}ms latency")
+            LogUtil.i(TAG, "Auto-selected best foreign DNS '${best.first.displayName}' with ${best.second}ms latency")
         } else {
-            LogUtil.w(TAG, "No working DNS server found during auto-select")
+            LogUtil.w(TAG, "No working foreign DNS server found during auto-select")
         }
         best
     }
 
     /**
-     * Probes currently configured DNS if auto DNS is enabled, and falls back to a working one if blocked.
+     * Scans foreign DNS presets and applies the fastest one, but ONLY when VPN is OFF.
+     * When VPN is active, scanning is bypassed so we don't benchmark through the proxy/VPN tunnel.
+     */
+    suspend fun scanAndSelectIfDisconnected(context: Context?, force: Boolean = false): Pair<DnsPreset, Long>? = withContext(Dispatchers.IO) {
+        val autoEnabled = MmkvManager.decodeSettingsBool(AppConfig.PREF_AUTO_DNS_ENABLED, true)
+        if (!autoEnabled) {
+            LogUtil.d(TAG, "Auto DNS is disabled, skipping scan.")
+            return@withContext null
+        }
+
+        if (CoreServiceManager.isRunning()) {
+            LogUtil.d(TAG, "VPN is currently running; skipping disconnected DNS scan.")
+            return@withContext null
+        }
+
+        val now = System.currentTimeMillis()
+        if (!force && (now - lastScanTimestamp < SCAN_COOLDOWN_MS)) {
+            LogUtil.d(TAG, "Skipping DNS scan due to cooldown (${(now - lastScanTimestamp) / 1000}s ago)")
+            return@withContext null
+        }
+
+        LogUtil.i(TAG, "Executing foreign DNS scan while VPN is disconnected...")
+        lastScanTimestamp = now
+        val best = autoSelectBestDns(context = null)
+        best
+    }
+
+    /**
+     * Probes currently configured DNS if auto DNS is enabled, and falls back to a working foreign one if blocked.
      */
     suspend fun ensureDnsHealthy(context: Context) = withContext(Dispatchers.IO) {
-        val autoEnabled = MmkvManager.decodeSettingsBool(AppConfig.PREF_AUTO_DNS_ENABLED, false)
+        val autoEnabled = MmkvManager.decodeSettingsBool(AppConfig.PREF_AUTO_DNS_ENABLED, true)
         if (!autoEnabled) return@withContext
 
         val currentVpnDns = SettingsManager.getVpnDnsServers().firstOrNull() ?: "1.1.1.1"
-        val latency = benchmarkDns(currentVpnDns, timeoutMs = 1000)
+        val latency = benchmarkDns(currentVpnDns, timeoutMs = 800)
         if (latency <= 0L) {
             LogUtil.w(TAG, "Current DNS $currentVpnDns is unreachable/blocked on this network. Triggering auto-fallback...")
-            autoSelectBestDns(context)
+            autoSelectBestDns(null)
         }
     }
 }

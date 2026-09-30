@@ -29,8 +29,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.v2ray.ang.extension.toast
-import com.v2ray.ang.handler.DnsSelectorManager
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -38,12 +36,13 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.AppConfig.VPN
 import com.v2ray.ang.R
+import com.v2ray.ang.extension.toast
 import com.v2ray.ang.extension.toastError
 import com.v2ray.ang.handler.AppLocaleManager
+import com.v2ray.ang.handler.DnsSelectorManager
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.MmkvManager.rememberMmkvBool
 import com.v2ray.ang.handler.MmkvManager.rememberMmkvString
-import com.v2ray.ang.handler.SettingsChangeManager
 import com.v2ray.ang.root.RootManager
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppTopBar
@@ -57,7 +56,6 @@ import com.v2ray.ang.ui.compose.ThemeManager
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.ui.checkupdate.CheckUpdateActivity
 import com.v2ray.ang.util.LogUtil
-import com.v2ray.ang.util.Utils
 import kotlinx.coroutines.launch
 
 class SettingsActivity : BaseComponentActivity() {
@@ -93,7 +91,6 @@ class SettingsActivity : BaseComponentActivity() {
         SettingsScreen(
             viewModel = viewModel,
             onBackClick = { finish() },
-            onModeHelpClicked = { Utils.openUri(this, AppConfig.APP_WIKI_MODE) },
             onSystemVpnSettingsClicked = ::openSystemVpnSettings,
             onCheckUpdateClicked = { startActivity(Intent(this, CheckUpdateActivity::class.java)) }
         )
@@ -105,7 +102,6 @@ class SettingsActivity : BaseComponentActivity() {
 fun SettingsScreen(
     viewModel: SettingsViewModel,
     onBackClick: () -> Unit,
-    onModeHelpClicked: () -> Unit,
     onSystemVpnSettingsClicked: () -> Unit,
     onCheckUpdateClicked: () -> Unit
 ) {
@@ -114,19 +110,41 @@ fun SettingsScreen(
     val scrollState = rememberScrollState()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val systemVpnSettingsAvailable by viewModel.systemVpnSettingsAvailable.collectAsStateWithLifecycle()
+
     var uiSettingsExpanded by rememberSaveable { mutableStateOf(true) }
     var vpnSettingsExpanded by rememberSaveable { mutableStateOf(true) }
     var dnsSettingsExpanded by rememberSaveable { mutableStateOf(true) }
     var coreSettingsExpanded by rememberSaveable { mutableStateOf(true) }
-    var muxSettingsExpanded by rememberSaveable { mutableStateOf(false) }
-    var fragmentSettingsExpanded by rememberSaveable { mutableStateOf(false) }
-    var observatorySettingsExpanded by rememberSaveable { mutableStateOf(false) }
     var advancedSettingsExpanded by rememberSaveable { mutableStateOf(true) }
     var modeSettingsExpanded by rememberSaveable { mutableStateOf(true) }
     var updateSettingsExpanded by rememberSaveable { mutableStateOf(true) }
 
-    var autoDns by rememberMmkvBool(AppConfig.PREF_AUTO_DNS_ENABLED, false)
+    // --- UI Settings ---
+    var liquidGlassEnabled by rememberMmkvBool(AppConfig.PREF_LIQUID_GLASS_ENABLED, true)
+    var liquidGlassIntensity by rememberMmkvString(AppConfig.PREF_LIQUID_GLASS_INTENSITY, "standard")
+    var speedEnabled by rememberMmkvBool(AppConfig.PREF_SPEED_ENABLED, false)
+    var dynamicColor by rememberMmkvBool(AppConfig.PREF_DYNAMIC_COLOR, true)
+    var language by remember {
+        mutableStateOf(
+            MmkvManager.decodeSettingsString(AppConfig.PREF_LANGUAGE, "auto") ?: "auto"
+        )
+    }
+    var uiModeNight by rememberMmkvString(AppConfig.PREF_UI_MODE_NIGHT, "2")
+
+    // --- VPN Settings ---
+    var mode by rememberMmkvString(AppConfig.PREF_MODE, VPN)
+    val isVpn = mode == VPN
+    var useHevTun by rememberMmkvBool(AppConfig.PREF_USE_HEV_TUNNEL, true)
+    var vpnBypassLan by rememberMmkvString(AppConfig.PREF_VPN_BYPASS_LAN, AppConfig.DEFAULT_VPN_BYPASS_LAN)
+    var appendHttpProxy by rememberMmkvBool(AppConfig.PREF_APPEND_HTTP_PROXY, false)
+    var localDns by rememberMmkvBool(AppConfig.PREF_LOCAL_DNS_ENABLED, false)
+    var fakeDns by rememberMmkvBool(AppConfig.PREF_FAKE_DNS_ENABLED, false)
+
+    // --- Smart DNS Selector ---
+    var autoDns by rememberMmkvBool(AppConfig.PREF_AUTO_DNS_ENABLED, true)
     var dnsPresetMode by rememberMmkvString(AppConfig.PREF_DNS_SELECTOR_MODE, "auto")
+    var remoteDns by rememberMmkvString(AppConfig.PREF_REMOTE_DNS, "")
+    var domesticDns by rememberMmkvString(AppConfig.PREF_DOMESTIC_DNS, "")
     var isBenchmarkingDns by remember { mutableStateOf(false) }
 
     val dnsPresetEntries = listOf(
@@ -135,10 +153,10 @@ fun SettingsScreen(
         "Google (8.8.8.8 / DoH)",
         "Quad9 (9.9.9.9 / Secure)",
         "OpenDNS Cisco (208.67.222.222)",
-        "Shecan / شکن (178.22.122.100)",
-        "Electro / الکترو (78.157.42.101)",
-        "Radar Game / رادار (10.202.10.10)",
         "AdGuard DNS (94.140.14.14)",
+        "Control D (76.76.2.0)",
+        "DNS.WATCH (84.200.69.80)",
+        "Level3 / Lumen (4.2.2.4)",
         "Yandex DNS (77.88.8.8)",
         stringResource(R.string.dns_preset_custom)
     )
@@ -148,98 +166,29 @@ fun SettingsScreen(
         "google",
         "quad9",
         "opendns",
-        "shecan",
-        "electro",
-        "radar",
         "adguard",
+        "controld",
+        "dnswatch",
+        "level3",
         "yandex",
         "custom"
     )
 
-    var localDns by rememberMmkvBool(AppConfig.PREF_LOCAL_DNS_ENABLED, false)
-    var fakeDns by rememberMmkvBool(AppConfig.PREF_FAKE_DNS_ENABLED, false)
-    var appendHttpProxy by rememberMmkvBool(AppConfig.PREF_APPEND_HTTP_PROXY, false)
-    var vpnDns by rememberMmkvString(AppConfig.PREF_VPN_DNS, "")
-    var vpnBypassLan by rememberMmkvString(AppConfig.PREF_VPN_BYPASS_LAN, AppConfig.DEFAULT_VPN_BYPASS_LAN)
-    var vpnInterfaceAddress by rememberMmkvString(AppConfig.PREF_VPN_INTERFACE_ADDRESS_CONFIG_INDEX, "0")
-    var vpnMtu by rememberMmkvString(AppConfig.PREF_VPN_MTU, "")
+    // --- Core & Sharing ---
+    var sniffingEnabled by rememberMmkvBool(AppConfig.PREF_SNIFFING_ENABLED, true)
+    var routeOnlyEnabled by rememberMmkvBool(AppConfig.PREF_ROUTE_ONLY_ENABLED, false)
+    var proxySharing by rememberMmkvBool(AppConfig.PREF_PROXY_SHARING, false)
+    var socksPort by rememberMmkvString(AppConfig.PREF_SOCKS_PORT, "")
 
-    var mux by rememberMmkvBool(AppConfig.PREF_MUX_ENABLED, false)
-    var muxConcurrency by rememberMmkvString(AppConfig.PREF_MUX_CONCURRENCY, "8")
-    var muxXudpConcurrency by rememberMmkvString(AppConfig.PREF_MUX_XUDP_CONCURRENCY, AppConfig.DEFAULT_MUX_XUDP_CONCURRENCY)
-    var muxXudpQuic by rememberMmkvString(AppConfig.PREF_MUX_XUDP_QUIC, "reject")
+    // --- Advanced ---
+    var isBooted by rememberMmkvBool(AppConfig.PREF_IS_BOOTED, false)
 
-    var fragment by rememberMmkvBool(AppConfig.PREF_FRAGMENT_ENABLED, false)
-    var fragmentPackets by rememberMmkvString(AppConfig.PREF_FRAGMENT_PACKETS, "tlshello")
-    var fragmentLength by rememberMmkvString(AppConfig.PREF_FRAGMENT_LENGTH, "50-100")
-    var fragmentInterval by rememberMmkvString(AppConfig.PREF_FRAGMENT_INTERVAL, "10-20")
-    var fragmentMaxSplit by rememberMmkvString(AppConfig.PREF_FRAGMENT_MAXSPLIT, "10")
-    var observatoryLeastPingInterval by rememberMmkvString(AppConfig.PREF_OBSERVATORY_LEAST_PING_INTERVAL, AppConfig.OBSERVATORY_LEAST_PING_INTERVAL)
-    var observatoryLeastLoadInterval by rememberMmkvString(AppConfig.PREF_OBSERVATORY_LEAST_LOAD_INTERVAL, AppConfig.OBSERVATORY_LEAST_LOAD_INTERVAL)
-    var observatoryLeastLoadMethod by rememberMmkvString(AppConfig.PREF_OBSERVATORY_LEAST_LOAD_METHOD, AppConfig.OBSERVATORY_LEAST_LOAD_METHOD)
-    var observatoryLeastLoadSampling by rememberMmkvString(AppConfig.PREF_OBSERVATORY_LEAST_LOAD_SAMPLING, AppConfig.OBSERVATORY_LEAST_LOAD_SAMPLING)
-    var observatoryLeastLoadTimeout by rememberMmkvString(AppConfig.PREF_OBSERVATORY_LEAST_LOAD_TIMEOUT, AppConfig.OBSERVATORY_LEAST_LOAD_TIMEOUT)
-
-    var mode by rememberMmkvString(AppConfig.PREF_MODE, VPN)
+    // --- Mode & Root ---
     var enableRootMode by rememberMmkvBool(AppConfig.PREF_ROOT_MODE_ENABLE, false)
     var lanSharing by rememberMmkvBool(AppConfig.PREF_ROOT_LAN_SHARING, false)
 
-    var hevTunLogLevel by rememberMmkvString(AppConfig.PREF_HEV_TUNNEL_LOGLEVEL, AppConfig.DEFAULT_HEV_TUNNEL_LOGLEVEL)
-    var hevTunRwTimeout by rememberMmkvString(AppConfig.PREF_HEV_TUNNEL_RW_TIMEOUT, "")
-    var useHevTun by rememberMmkvBool(AppConfig.PREF_USE_HEV_TUNNEL, true)
-
-    var enableLocalProxy by rememberMmkvBool(AppConfig.PREF_ENABLE_LOCAL_PROXY, true)
-    var socksPort by rememberMmkvString(AppConfig.PREF_SOCKS_PORT, "")
-    var dynamicSocksPort by rememberMmkvBool(AppConfig.PREF_DYNAMIC_SOCKS_PORT, false)
-    var socksUsername by rememberMmkvString(AppConfig.PREF_SOCKS_USERNAME, "")
-    var socksPassword by rememberMmkvString(AppConfig.PREF_SOCKS_PASSWORD, "")
-    var socksEnableUdp by rememberMmkvBool(AppConfig.PREF_SOCKS_ENABLE_UDP, AppConfig.DEFAULT_SOCKS_ENABLE_UDP)
-    var proxySharing by rememberMmkvBool(AppConfig.PREF_PROXY_SHARING, false)
-
-    var speedEnabled by rememberMmkvBool(AppConfig.PREF_SPEED_ENABLED, false)
-    var confirmRemove by rememberMmkvBool(AppConfig.PREF_CONFIRM_REMOVE, false)
-    var doubleColumnDisplay by rememberMmkvBool(AppConfig.PREF_DOUBLE_COLUMN_DISPLAY, false)
-    var groupAllDisplay by rememberMmkvBool(AppConfig.PREF_GROUP_ALL_DISPLAY, false)
-    var language by remember {
-        mutableStateOf(
-            MmkvManager.decodeSettingsString(AppConfig.PREF_LANGUAGE, "auto") ?: "auto"
-        )
-    }
-    var uiModeNight by rememberMmkvString(AppConfig.PREF_UI_MODE_NIGHT, "2")
-    var dynamicColor by rememberMmkvBool(AppConfig.PREF_DYNAMIC_COLOR, true)
-
-    var liquidGlassEnabled by rememberMmkvBool(AppConfig.PREF_LIQUID_GLASS_ENABLED, true)
-    var liquidGlassIntensity by rememberMmkvString(AppConfig.PREF_LIQUID_GLASS_INTENSITY, "standard")
+    // --- Updates ---
     var autoCheckUpdate by rememberMmkvBool(AppConfig.PREF_AUTO_CHECK_UPDATE, true)
-    var customUpdateUrl by rememberMmkvString(AppConfig.PREF_CUSTOM_UPDATE_URL, "")
-
-    val liquidGlassIntensityEntries = listOf(
-        stringResource(R.string.liquid_glass_subtle),
-        stringResource(R.string.liquid_glass_standard),
-        stringResource(R.string.liquid_glass_high)
-    )
-    val liquidGlassIntensityValues = listOf("subtle", "standard", "high")
-
-    var ipv6Enabled by rememberMmkvBool(AppConfig.PREF_IPV6_ENABLED, false)
-    var preferIpv6 by rememberMmkvBool(AppConfig.PREF_PREFER_IPV6, false)
-    var sniffingEnabled by rememberMmkvBool(AppConfig.PREF_SNIFFING_ENABLED, true)
-    var routeOnlyEnabled by rememberMmkvBool(AppConfig.PREF_ROUTE_ONLY_ENABLED, false)
-    var remoteDns by rememberMmkvString(AppConfig.PREF_REMOTE_DNS, "")
-    var domesticDns by rememberMmkvString(AppConfig.PREF_DOMESTIC_DNS, "")
-    var dnsHosts by rememberMmkvString(AppConfig.PREF_DNS_HOSTS, "")
-    var coreLogLevel by rememberMmkvString(AppConfig.PREF_LOGLEVEL, "warning")
-    var outboundResolveMethod by rememberMmkvString(AppConfig.PREF_OUTBOUND_DOMAIN_RESOLVE_METHOD, AppConfig.DEFAULT_OUTBOUND_DOMAIN_RESOLVE_METHOD)
-
-    var isBooted by rememberMmkvBool(AppConfig.PREF_IS_BOOTED, false)
-    var delayTestUrl by rememberMmkvString(AppConfig.PREF_DELAY_TEST_URL, "")
-    var realPingConcurrency by rememberMmkvString(AppConfig.PREF_REAL_PING_CONCURRENCY, "16")
-    var ipApiUrl by rememberMmkvString(AppConfig.PREF_IP_API_URL, "")
-
-    val isVpn = mode == VPN
-    val hevTunEnabled = isVpn && useHevTun
-    val localProxyForced = hevTunEnabled
-    val effectiveLocalProxy = enableLocalProxy || localProxyForced
-    val muxXudpConcurrencyInt = muxXudpConcurrency.toIntOrNull() ?: AppConfig.DEFAULT_MUX_XUDP_CONCURRENCY.toInt()
 
     val dynamicColorSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     LaunchedEffect(dynamicColorSupported) {
@@ -249,26 +198,18 @@ fun SettingsScreen(
         }
     }
 
+    val liquidGlassIntensityEntries = listOf(
+        stringResource(R.string.liquid_glass_subtle),
+        stringResource(R.string.liquid_glass_standard),
+        stringResource(R.string.liquid_glass_high)
+    )
+    val liquidGlassIntensityValues = listOf("subtle", "standard", "high")
     val languageEntries = stringArrayResource(R.array.language_select).toList()
     val languageValues = stringArrayResource(R.array.language_select_value).toList()
     val uiModeNightEntries = stringArrayResource(R.array.ui_mode_night).toList()
     val uiModeNightValues = stringArrayResource(R.array.ui_mode_night_value).toList()
     val bypassLanEntries = stringArrayResource(R.array.vpn_bypass_lan).toList()
     val bypassLanValues = stringArrayResource(R.array.vpn_bypass_lan_value).toList()
-    val interfaceAddrEntries = stringArrayResource(R.array.vpn_interface_address).toList()
-    val interfaceAddrValues = stringArrayResource(R.array.vpn_interface_address_value).toList()
-    val hevLogEntries = stringArrayResource(R.array.hev_tunnel_loglevel).toList()
-    val hevLogValues = stringArrayResource(R.array.hev_tunnel_loglevel).toList()
-    val coreLogLevelEntries = stringArrayResource(R.array.core_loglevel).toList()
-    val coreLogLevelValues = stringArrayResource(R.array.core_loglevel).toList()
-    val outboundResolveEntries = stringArrayResource(R.array.outbound_domain_resolve_method).toList()
-    val outboundResolveValues = stringArrayResource(R.array.outbound_domain_resolve_method_value).toList()
-    val xudpQuicEntries = stringArrayResource(R.array.mux_xudp_quic_entries).toList()
-    val xudpQuicValues = stringArrayResource(R.array.mux_xudp_quic_value).toList()
-    val fragmentPacketsEntries = stringArrayResource(R.array.fragment_packets).toList()
-    val fragmentPacketsValues = stringArrayResource(R.array.fragment_packets).toList()
-    val observatoryLeastLoadMethodEntries = stringArrayResource(R.array.observatory_least_load_method).toList()
-    val observatoryLeastLoadMethodValues = stringArrayResource(R.array.observatory_least_load_method).toList()
     val modeEntries = stringArrayResource(R.array.mode_entries).toList()
     val modeValues = stringArrayResource(R.array.mode_value).toList()
 
@@ -289,6 +230,7 @@ fun SettingsScreen(
                 .verticalScrollbar(scrollState)
                 .verticalScroll(scrollState)
         ) {
+            // 1. UI Settings
             CollapsiblePreferenceGroupHeader(
                 title = stringResource(R.string.title_ui_settings),
                 expanded = uiSettingsExpanded,
@@ -323,30 +265,6 @@ fun SettingsScreen(
                     onCheckedChange = { speedEnabled = it }
                 )
                 SettingsSwitchItem(
-                    title = stringResource(R.string.title_pref_confirm_remove),
-                    summary = stringResource(R.string.summary_pref_confirm_remove),
-                    checked = confirmRemove,
-                    onCheckedChange = { confirmRemove = it }
-                )
-                SettingsSwitchItem(
-                    title = stringResource(R.string.title_pref_double_column_display),
-                    summary = stringResource(R.string.summary_pref_double_column_display),
-                    checked = doubleColumnDisplay,
-                    onCheckedChange = {
-                        doubleColumnDisplay = it
-                        SettingsChangeManager.makeSetupGroupTab()
-                    }
-                )
-                SettingsSwitchItem(
-                    title = stringResource(R.string.title_pref_group_all_display),
-                    summary = stringResource(R.string.summary_pref_group_all_display),
-                    checked = groupAllDisplay,
-                    onCheckedChange = {
-                        groupAllDisplay = it
-                        SettingsChangeManager.makeSetupGroupTab()
-                    }
-                )
-                SettingsSwitchItem(
                     title = stringResource(R.string.title_pref_dynamic_color),
                     summary = stringResource(R.string.summary_pref_dynamic_color),
                     checked = dynamicColor,
@@ -378,23 +296,34 @@ fun SettingsScreen(
                 )
             }
 
+            // 2. VPN Settings
             CollapsiblePreferenceGroupHeader(
                 title = stringResource(R.string.title_vpn_settings),
                 expanded = vpnSettingsExpanded,
                 onExpandedChange = { vpnSettingsExpanded = it }
             )
             if (vpnSettingsExpanded) {
-                SettingsSwitchItem(
-                    title = stringResource(R.string.title_pref_ipv6_enabled),
-                    summary = stringResource(R.string.summary_pref_ipv6_enabled),
-                    checked = ipv6Enabled,
-                    onCheckedChange = { ipv6Enabled = it }
+                SettingsListItem(
+                    title = stringResource(R.string.title_pref_vpn_bypass_lan),
+                    entries = bypassLanEntries,
+                    values = bypassLanValues,
+                    selectedValue = vpnBypassLan,
+                    enabled = isVpn,
+                    onSelected = { vpnBypassLan = it }
                 )
                 SettingsSwitchItem(
-                    title = stringResource(R.string.title_pref_prefer_ipv6),
-                    summary = stringResource(R.string.summary_pref_prefer_ipv6),
-                    checked = preferIpv6,
-                    onCheckedChange = { preferIpv6 = it }
+                    title = stringResource(R.string.title_pref_use_hev_tunnel),
+                    summary = stringResource(R.string.summary_pref_use_hev_tunnel),
+                    checked = useHevTun,
+                    enabled = isVpn,
+                    onCheckedChange = { useHevTun = it }
+                )
+                SettingsSwitchItem(
+                    title = stringResource(R.string.title_pref_append_http_proxy),
+                    summary = stringResource(R.string.summary_pref_append_http_proxy),
+                    checked = appendHttpProxy,
+                    enabled = isVpn,
+                    onCheckedChange = { appendHttpProxy = it }
                 )
                 SettingsSwitchItem(
                     title = stringResource(R.string.title_pref_local_dns_enabled),
@@ -410,71 +339,9 @@ fun SettingsScreen(
                     enabled = isVpn && localDns,
                     onCheckedChange = { fakeDns = it }
                 )
-                SettingsEditItem(
-                    title = stringResource(R.string.title_pref_vpn_dns),
-                    value = vpnDns,
-                    enabled = isVpn && !localDns,
-                    onValueChanged = { vpnDns = it }
-                )
-                SettingsSwitchItem(
-                    title = stringResource(R.string.title_pref_append_http_proxy),
-                    summary = stringResource(R.string.summary_pref_append_http_proxy),
-                    checked = appendHttpProxy,
-                    enabled = effectiveLocalProxy,
-                    onCheckedChange = { appendHttpProxy = it }
-                )
-                SettingsListItem(
-                    title = stringResource(R.string.title_pref_vpn_bypass_lan),
-                    entries = bypassLanEntries,
-                    values = bypassLanValues,
-                    selectedValue = vpnBypassLan,
-                    enabled = isVpn,
-                    onSelected = { vpnBypassLan = it }
-                )
-                SettingsListItem(
-                    title = stringResource(R.string.title_pref_vpn_interface_address),
-                    entries = interfaceAddrEntries,
-                    values = interfaceAddrValues,
-                    selectedValue = vpnInterfaceAddress,
-                    enabled = isVpn,
-                    onSelected = { vpnInterfaceAddress = it }
-                )
-                SettingsEditItem(
-                    title = stringResource(R.string.title_pref_vpn_mtu),
-                    value = vpnMtu,
-                    enabled = isVpn,
-                    keyboardNumber = true,
-                    onValueChanged = { vpnMtu = it }
-                )
-                SettingsSwitchItem(
-                    title = stringResource(R.string.title_pref_use_hev_tunnel),
-                    summary = stringResource(R.string.summary_pref_use_hev_tunnel),
-                    checked = useHevTun,
-                    enabled = isVpn,
-                    onCheckedChange = {
-                        useHevTun = it
-                        if (it && !enableLocalProxy) {
-                            enableLocalProxy = true
-                        }
-                    }
-                )
-                SettingsListItem(
-                    title = stringResource(R.string.title_pref_hev_tunnel_loglevel),
-                    entries = hevLogEntries,
-                    values = hevLogValues,
-                    selectedValue = hevTunLogLevel,
-                    enabled = hevTunEnabled,
-                    onSelected = { hevTunLogLevel = it }
-                )
-                SettingsEditItem(
-                    title = stringResource(R.string.title_pref_hev_tunnel_rw_timeout),
-                    value = hevTunRwTimeout,
-                    enabled = hevTunEnabled,
-                    keyboardNumber = true,
-                    onValueChanged = { hevTunRwTimeout = it }
-                )
             }
 
+            // 3. Smart DNS Selector (Foreign only, automated ping-based)
             CollapsiblePreferenceGroupHeader(
                 title = stringResource(R.string.title_dns_selector),
                 expanded = dnsSettingsExpanded,
@@ -501,7 +368,6 @@ fun SettingsScreen(
                                 isBenchmarkingDns = false
                                 if (best != null) {
                                     remoteDns = MmkvManager.decodeSettingsString(AppConfig.PREF_REMOTE_DNS, "") ?: ""
-                                    vpnDns = MmkvManager.decodeSettingsString(AppConfig.PREF_VPN_DNS, "") ?: ""
                                     domesticDns = MmkvManager.decodeSettingsString(AppConfig.PREF_DOMESTIC_DNS, "") ?: ""
                                     val msg = context.getString(R.string.dns_test_success, best.first.displayName, best.second)
                                     context.toast(msg)
@@ -514,7 +380,6 @@ fun SettingsScreen(
                             if (preset != null) {
                                 DnsSelectorManager.applyPreset(context, preset)
                                 remoteDns = MmkvManager.decodeSettingsString(AppConfig.PREF_REMOTE_DNS, "") ?: ""
-                                vpnDns = MmkvManager.decodeSettingsString(AppConfig.PREF_VPN_DNS, "") ?: ""
                                 domesticDns = MmkvManager.decodeSettingsString(AppConfig.PREF_DOMESTIC_DNS, "") ?: ""
                             }
                         }
@@ -532,7 +397,6 @@ fun SettingsScreen(
                             if (best != null) {
                                 dnsPresetMode = "auto"
                                 remoteDns = MmkvManager.decodeSettingsString(AppConfig.PREF_REMOTE_DNS, "") ?: ""
-                                vpnDns = MmkvManager.decodeSettingsString(AppConfig.PREF_VPN_DNS, "") ?: ""
                                 domesticDns = MmkvManager.decodeSettingsString(AppConfig.PREF_DOMESTIC_DNS, "") ?: ""
                                 val msg = context.getString(R.string.dns_test_success, best.first.displayName, best.second)
                                 context.toast(msg)
@@ -542,29 +406,21 @@ fun SettingsScreen(
                         }
                     }
                 )
-                SettingsEditItem(
-                    title = stringResource(R.string.title_pref_remote_dns),
-                    value = remoteDns,
-                    onValueChanged = {
-                        remoteDns = it
-                        dnsPresetMode = "custom"
-                    }
-                )
-                SettingsEditItem(
-                    title = stringResource(R.string.title_pref_domestic_dns),
-                    value = domesticDns,
-                    onValueChanged = {
-                        domesticDns = it
-                        dnsPresetMode = "custom"
-                    }
-                )
-                SettingsEditItem(
-                    title = stringResource(R.string.title_pref_dns_hosts),
-                    value = dnsHosts,
-                    onValueChanged = { dnsHosts = it }
-                )
+                if (dnsPresetMode == "custom") {
+                    SettingsEditItem(
+                        title = stringResource(R.string.title_pref_remote_dns),
+                        value = remoteDns,
+                        onValueChanged = { remoteDns = it }
+                    )
+                    SettingsEditItem(
+                        title = stringResource(R.string.title_pref_domestic_dns),
+                        value = domesticDns,
+                        onValueChanged = { domesticDns = it }
+                    )
+                }
             }
 
+            // 4. Core & LAN Sharing Settings
             CollapsiblePreferenceGroupHeader(
                 title = stringResource(R.string.title_core_settings),
                 expanded = coreSettingsExpanded,
@@ -584,204 +440,20 @@ fun SettingsScreen(
                     onCheckedChange = { routeOnlyEnabled = it }
                 )
                 SettingsSwitchItem(
-                    title = stringResource(R.string.title_pref_enable_local_proxy),
-                    summary = stringResource(R.string.summary_pref_enable_local_proxy),
-                    checked = enableLocalProxy,
-                    enabled = !localProxyForced,
-                    onCheckedChange = {
-                        if (!localProxyForced) {
-                            enableLocalProxy = it
-                            if (!it && appendHttpProxy) {
-                                appendHttpProxy = false
-                            }
-                        }
-                    }
-                )
-                SettingsSwitchItem(
                     title = stringResource(R.string.title_pref_proxy_sharing_enabled),
                     summary = stringResource(R.string.summary_pref_proxy_sharing_enabled),
                     checked = proxySharing,
-                    enabled = effectiveLocalProxy,
                     onCheckedChange = { proxySharing = it }
-                )
-                SettingsSwitchItem(
-                    title = stringResource(R.string.title_pref_dynamic_socks_port),
-                    summary = stringResource(R.string.summary_pref_dynamic_socks_port),
-                    checked = dynamicSocksPort,
-                    enabled = effectiveLocalProxy,
-                    onCheckedChange = { dynamicSocksPort = it }
                 )
                 SettingsEditItem(
                     title = stringResource(R.string.title_pref_socks_port),
                     value = socksPort,
-                    enabled = effectiveLocalProxy && !dynamicSocksPort,
                     keyboardNumber = true,
                     onValueChanged = { socksPort = it }
                 )
-                SettingsEditItem(
-                    title = stringResource(R.string.title_pref_socks_username),
-                    value = socksUsername,
-                    enabled = effectiveLocalProxy,
-                    onValueChanged = { socksUsername = it }
-                )
-                SettingsEditItem(
-                    title = stringResource(R.string.title_pref_socks_password),
-                    value = socksPassword,
-                    enabled = effectiveLocalProxy,
-                    isPassword = true,
-                    onValueChanged = { socksPassword = it }
-                )
-                SettingsSwitchItem(
-                    title = stringResource(R.string.title_pref_socks_enable_udp),
-                    summary = stringResource(R.string.summary_pref_socks_enable_udp),
-                    checked = socksEnableUdp,
-                    enabled = effectiveLocalProxy,
-                    onCheckedChange = { socksEnableUdp = it }
-                )
-                SettingsListItem(
-                    title = stringResource(R.string.title_core_loglevel),
-                    entries = coreLogLevelEntries,
-                    values = coreLogLevelValues,
-                    selectedValue = coreLogLevel,
-                    onSelected = { coreLogLevel = it }
-                )
-                SettingsListItem(
-                    title = stringResource(R.string.title_outbound_domain_resolve_method),
-                    entries = outboundResolveEntries,
-                    values = outboundResolveValues,
-                    selectedValue = outboundResolveMethod,
-                    onSelected = { outboundResolveMethod = it }
-                )
             }
 
-            CollapsiblePreferenceGroupHeader(
-                title = stringResource(R.string.title_mux_settings),
-                expanded = muxSettingsExpanded,
-                onExpandedChange = { muxSettingsExpanded = it }
-            )
-            if (muxSettingsExpanded) {
-                SettingsSwitchItem(
-                    title = stringResource(R.string.title_pref_mux_enabled),
-                    summary = stringResource(R.string.summary_pref_mux_enabled),
-                    checked = mux,
-                    onCheckedChange = { mux = it }
-                )
-                SettingsEditItem(
-                    title = stringResource(R.string.title_pref_mux_concurrency),
-                    value = muxConcurrency,
-                    enabled = mux,
-                    keyboardNumber = true,
-                    onValueChanged = { muxConcurrency = it }
-                )
-                SettingsEditItem(
-                    title = stringResource(R.string.title_pref_mux_xudp_concurrency),
-                    value = muxXudpConcurrency,
-                    enabled = mux,
-                    keyboardNumber = true,
-                    onValueChanged = { muxXudpConcurrency = it }
-                )
-                SettingsListItem(
-                    title = stringResource(R.string.title_pref_mux_xudp_quic),
-                    entries = xudpQuicEntries,
-                    values = xudpQuicValues,
-                    selectedValue = muxXudpQuic,
-                    enabled = mux && muxXudpConcurrencyInt >= 0,
-                    onSelected = { muxXudpQuic = it }
-                )
-            }
-
-            CollapsiblePreferenceGroupHeader(
-                title = stringResource(R.string.title_fragment_settings),
-                expanded = fragmentSettingsExpanded,
-                onExpandedChange = { fragmentSettingsExpanded = it }
-            )
-            if (fragmentSettingsExpanded) {
-                SettingsSwitchItem(
-                    title = stringResource(R.string.title_pref_fragment_enabled),
-                    checked = fragment,
-                    onCheckedChange = { fragment = it }
-                )
-                SettingsListItem(
-                    title = stringResource(R.string.title_pref_fragment_packets),
-                    entries = fragmentPacketsEntries,
-                    values = fragmentPacketsValues,
-                    selectedValue = fragmentPackets,
-                    enabled = fragment,
-                    onSelected = { fragmentPackets = it }
-                )
-                SettingsEditItem(
-                    title = stringResource(R.string.title_pref_fragment_length),
-                    value = fragmentLength,
-                    enabled = fragment,
-                    onValueChanged = { fragmentLength = it }
-                )
-                SettingsEditItem(
-                    title = stringResource(R.string.title_pref_fragment_interval),
-                    value = fragmentInterval,
-                    enabled = fragment,
-                    onValueChanged = { fragmentInterval = it }
-                )
-                SettingsEditItem(
-                    title = stringResource(R.string.title_pref_fragment_maxsplit),
-                    value = fragmentMaxSplit,
-                    enabled = fragment,
-                    keyboardNumber = true,
-                    onValueChanged = { fragmentMaxSplit = it }
-                )
-            }
-
-            CollapsiblePreferenceGroupHeader(
-                title = stringResource(R.string.title_observatory_settings),
-                expanded = observatorySettingsExpanded,
-                onExpandedChange = { observatorySettingsExpanded = it }
-            )
-            if (observatorySettingsExpanded) {
-                SettingsEditItem(
-                    title = stringResource(R.string.title_pref_observatory_least_ping_interval),
-                    value = observatoryLeastPingInterval,
-                    onValueChanged = {
-                        viewModel.validateObservatoryDuration(it)?.let { value ->
-                            observatoryLeastPingInterval = value
-                        }
-                    }
-                )
-                SettingsEditItem(
-                    title = stringResource(R.string.title_pref_observatory_least_load_interval),
-                    value = observatoryLeastLoadInterval,
-                    onValueChanged = {
-                        viewModel.validateObservatoryDuration(it)?.let { value ->
-                            observatoryLeastLoadInterval = value
-                        }
-                    }
-                )
-                SettingsListItem(
-                    title = stringResource(R.string.title_pref_observatory_least_load_method),
-                    entries = observatoryLeastLoadMethodEntries,
-                    values = observatoryLeastLoadMethodValues,
-                    selectedValue = observatoryLeastLoadMethod,
-                    onSelected = { observatoryLeastLoadMethod = it }
-                )
-                SettingsEditItem(
-                    title = stringResource(R.string.title_pref_observatory_least_load_sampling),
-                    value = observatoryLeastLoadSampling,
-                    keyboardNumber = true,
-                    onValueChanged = {
-                        viewModel.validateObservatorySampling(it)?.let { value ->
-                            observatoryLeastLoadSampling = value
-                        }
-                    }
-                )
-                SettingsEditItem(
-                    title = stringResource(R.string.title_pref_observatory_least_load_timeout),
-                    value = observatoryLeastLoadTimeout,
-                    onValueChanged = {
-                        viewModel.validateObservatoryDuration(it)?.let { value ->
-                            observatoryLeastLoadTimeout = value
-                        }
-                    }
-                )
-            }
-
+            // 5. Advanced Settings
             CollapsiblePreferenceGroupHeader(
                 title = stringResource(R.string.title_advanced),
                 expanded = advancedSettingsExpanded,
@@ -801,24 +473,9 @@ fun SettingsScreen(
                         onClick = onSystemVpnSettingsClicked
                     )
                 }
-                SettingsEditItem(
-                    title = stringResource(R.string.title_pref_delay_test_url),
-                    value = delayTestUrl,
-                    onValueChanged = { delayTestUrl = it }
-                )
-                SettingsEditItem(
-                    title = stringResource(R.string.title_pref_real_ping_concurrency),
-                    value = realPingConcurrency,
-                    keyboardNumber = true,
-                    onValueChanged = { realPingConcurrency = it }
-                )
-                SettingsEditItem(
-                    title = stringResource(R.string.title_pref_ip_api_url),
-                    value = ipApiUrl,
-                    onValueChanged = { ipApiUrl = it }
-                )
             }
 
+            // 6. Mode & Root Settings
             CollapsiblePreferenceGroupHeader(
                 title = stringResource(R.string.title_mode_settings),
                 expanded = modeSettingsExpanded,
@@ -831,10 +488,6 @@ fun SettingsScreen(
                     values = modeValues,
                     selectedValue = mode,
                     onSelected = { mode = it }
-                )
-                SettingsMenuItem(
-                    title = stringResource(R.string.title_mode_help),
-                    onClick = onModeHelpClicked
                 )
                 SettingsSwitchItem(
                     title = stringResource(R.string.title_root_mode_enabled),
@@ -866,6 +519,7 @@ fun SettingsScreen(
                 )
             }
 
+            // 7. Update Settings
             CollapsiblePreferenceGroupHeader(
                 title = stringResource(R.string.title_update_settings),
                 expanded = updateSettingsExpanded,
@@ -877,11 +531,6 @@ fun SettingsScreen(
                     summary = stringResource(R.string.summary_pref_auto_check_update),
                     checked = autoCheckUpdate,
                     onCheckedChange = { autoCheckUpdate = it }
-                )
-                SettingsEditItem(
-                    title = stringResource(R.string.title_pref_custom_update_url),
-                    value = customUpdateUrl,
-                    onValueChanged = { customUpdateUrl = it }
                 )
                 SettingsMenuItem(
                     title = stringResource(R.string.update_check_for_update),

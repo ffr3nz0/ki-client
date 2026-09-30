@@ -18,6 +18,7 @@ import com.v2ray.ang.extension.isComplexType
 import com.v2ray.ang.extension.matchesPattern
 import com.v2ray.ang.extension.moveItem
 import com.v2ray.ang.handler.DnsCacheManager
+import com.v2ray.ang.handler.DnsSelectorManager
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SubscriptionUpdater
 import com.v2ray.ang.ui.base.BaseViewModel
@@ -28,6 +29,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -81,6 +83,7 @@ class MainViewModel(
     private var preloadJob: Job? = null
     private var selectedGroupLoadJob: Job? = null
     private var reloadJob: Job? = null
+    private var dnsScannerJob: Job? = null
 
     @Volatile
     private var testingGroupId: String? = null
@@ -93,6 +96,19 @@ class MainViewModel(
         setupGroupTab()
         autoUpdateSubscriptionsOnStartup()
         preResolveSelectedServer()
+        startPeriodicDnsScanner()
+    }
+
+    private fun startPeriodicDnsScanner() {
+        dnsScannerJob?.cancel()
+        dnsScannerJob = viewModelScope.launch(ioDispatcher) {
+            kotlinx.coroutines.delay(2000L)
+            DnsSelectorManager.scanAndSelectIfDisconnected(getApplication(), force = false)
+            while (isActive) {
+                kotlinx.coroutines.delay(10 * 60 * 1000L)
+                DnsSelectorManager.scanAndSelectIfDisconnected(getApplication(), force = false)
+            }
+        }
     }
 
     private fun preResolveSelectedServer() {
@@ -136,7 +152,13 @@ class MainViewModel(
     private fun handleServiceEvent(event: MainServiceEvent) {
         when (event) {
             MainServiceEvent.StateRunning -> updateRunningState(true, clearTestingText = false)
-            MainServiceEvent.StateNotRunning -> updateRunningState(false, clearTestingText = false)
+            MainServiceEvent.StateNotRunning -> {
+                updateRunningState(false, clearTestingText = false)
+                viewModelScope.launch(ioDispatcher) {
+                    kotlinx.coroutines.delay(1000L)
+                    DnsSelectorManager.scanAndSelectIfDisconnected(getApplication(), force = true)
+                }
+            }
             MainServiceEvent.StateStartSuccess -> {
                 toastSuccess(R.string.toast_services_success)
                 updateRunningState(true)
@@ -158,7 +180,13 @@ class MainViewModel(
                 updateRunningState(false)
             }
 
-            MainServiceEvent.StateStopSuccess -> updateRunningState(false)
+            MainServiceEvent.StateStopSuccess -> {
+                updateRunningState(false)
+                viewModelScope.launch(ioDispatcher) {
+                    kotlinx.coroutines.delay(1000L)
+                    DnsSelectorManager.scanAndSelectIfDisconnected(getApplication(), force = true)
+                }
+            }
             is MainServiceEvent.MeasureDelayResult -> {
                 _uiState.update { it.copy(status = MainStatus.ConnectionTest(event.result)) }
                 val currentGuid = uiState.value.selectedGuid
@@ -993,6 +1021,7 @@ class MainViewModel(
     }
 
     override fun onCleared() {
+        dnsScannerJob?.cancel()
         setupGroupJob?.cancel()
         preloadJob?.cancel()
         selectedGroupLoadJob?.cancel()
