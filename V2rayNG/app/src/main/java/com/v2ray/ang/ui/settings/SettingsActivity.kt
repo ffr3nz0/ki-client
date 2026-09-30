@@ -115,6 +115,8 @@ fun SettingsScreen(
     var vpnSettingsExpanded by rememberSaveable { mutableStateOf(true) }
     var dnsSettingsExpanded by rememberSaveable { mutableStateOf(true) }
     var coreSettingsExpanded by rememberSaveable { mutableStateOf(true) }
+    var muxSettingsExpanded by rememberSaveable { mutableStateOf(false) }
+    var fragmentSettingsExpanded by rememberSaveable { mutableStateOf(false) }
     var advancedSettingsExpanded by rememberSaveable { mutableStateOf(true) }
     var modeSettingsExpanded by rememberSaveable { mutableStateOf(true) }
     var updateSettingsExpanded by rememberSaveable { mutableStateOf(true) }
@@ -179,6 +181,24 @@ fun SettingsScreen(
     var routeOnlyEnabled by rememberMmkvBool(AppConfig.PREF_ROUTE_ONLY_ENABLED, false)
     var proxySharing by rememberMmkvBool(AppConfig.PREF_PROXY_SHARING, false)
     var socksPort by rememberMmkvString(AppConfig.PREF_SOCKS_PORT, "")
+
+    // --- Mux Settings (Default Collapsed) ---
+    var mux by rememberMmkvBool(AppConfig.PREF_MUX_ENABLED, false)
+    var muxConcurrency by rememberMmkvString(AppConfig.PREF_MUX_CONCURRENCY, "8")
+    var muxXudpConcurrency by rememberMmkvString(AppConfig.PREF_MUX_XUDP_CONCURRENCY, AppConfig.DEFAULT_MUX_XUDP_CONCURRENCY)
+    var muxXudpQuic by rememberMmkvString(AppConfig.PREF_MUX_XUDP_QUIC, "reject")
+    val muxXudpConcurrencyInt = muxXudpConcurrency.toIntOrNull() ?: AppConfig.DEFAULT_MUX_XUDP_CONCURRENCY.toInt()
+    val xudpQuicEntries = stringArrayResource(R.array.mux_xudp_quic_entries).toList()
+    val xudpQuicValues = stringArrayResource(R.array.mux_xudp_quic_value).toList()
+
+    // --- Fragment Settings (Default Collapsed) ---
+    var fragment by rememberMmkvBool(AppConfig.PREF_FRAGMENT_ENABLED, false)
+    var fragmentPackets by rememberMmkvString(AppConfig.PREF_FRAGMENT_PACKETS, "tlshello")
+    var fragmentLength by rememberMmkvString(AppConfig.PREF_FRAGMENT_LENGTH, "50-100")
+    var fragmentInterval by rememberMmkvString(AppConfig.PREF_FRAGMENT_INTERVAL, "10-20")
+    var fragmentMaxSplit by rememberMmkvString(AppConfig.PREF_FRAGMENT_MAXSPLIT, "10")
+    val fragmentPacketsEntries = stringArrayResource(R.array.fragment_packets).toList()
+    val fragmentPacketsValues = stringArrayResource(R.array.fragment_packets).toList()
 
     // --- Advanced ---
     var isBooted by rememberMmkvBool(AppConfig.PREF_IS_BOOTED, false)
@@ -453,7 +473,85 @@ fun SettingsScreen(
                 )
             }
 
-            // 5. Advanced Settings
+            // 5. Mux Settings (Default Collapsed)
+            CollapsiblePreferenceGroupHeader(
+                title = stringResource(R.string.title_mux_settings),
+                expanded = muxSettingsExpanded,
+                onExpandedChange = { muxSettingsExpanded = it }
+            )
+            if (muxSettingsExpanded) {
+                SettingsSwitchItem(
+                    title = stringResource(R.string.title_pref_mux_enabled),
+                    summary = stringResource(R.string.summary_pref_mux_enabled),
+                    checked = mux,
+                    onCheckedChange = { mux = it }
+                )
+                SettingsEditItem(
+                    title = stringResource(R.string.title_pref_mux_concurrency),
+                    value = muxConcurrency,
+                    enabled = mux,
+                    keyboardNumber = true,
+                    onValueChanged = { muxConcurrency = it }
+                )
+                SettingsEditItem(
+                    title = stringResource(R.string.title_pref_mux_xudp_concurrency),
+                    value = muxXudpConcurrency,
+                    enabled = mux,
+                    keyboardNumber = true,
+                    onValueChanged = { muxXudpConcurrency = it }
+                )
+                SettingsListItem(
+                    title = stringResource(R.string.title_pref_mux_xudp_quic),
+                    entries = xudpQuicEntries,
+                    values = xudpQuicValues,
+                    selectedValue = muxXudpQuic,
+                    enabled = mux && muxXudpConcurrencyInt >= 0,
+                    onSelected = { muxXudpQuic = it }
+                )
+            }
+
+            // 6. Fragment Settings (Default Collapsed)
+            CollapsiblePreferenceGroupHeader(
+                title = stringResource(R.string.title_fragment_settings),
+                expanded = fragmentSettingsExpanded,
+                onExpandedChange = { fragmentSettingsExpanded = it }
+            )
+            if (fragmentSettingsExpanded) {
+                SettingsSwitchItem(
+                    title = stringResource(R.string.title_pref_fragment_enabled),
+                    checked = fragment,
+                    onCheckedChange = { fragment = it }
+                )
+                SettingsListItem(
+                    title = stringResource(R.string.title_pref_fragment_packets),
+                    entries = fragmentPacketsEntries,
+                    values = fragmentPacketsValues,
+                    selectedValue = fragmentPackets,
+                    enabled = fragment,
+                    onSelected = { fragmentPackets = it }
+                )
+                SettingsEditItem(
+                    title = stringResource(R.string.title_pref_fragment_length),
+                    value = fragmentLength,
+                    enabled = fragment,
+                    onValueChanged = { fragmentLength = it }
+                )
+                SettingsEditItem(
+                    title = stringResource(R.string.title_pref_fragment_interval),
+                    value = fragmentInterval,
+                    enabled = fragment,
+                    onValueChanged = { fragmentInterval = it }
+                )
+                SettingsEditItem(
+                    title = stringResource(R.string.title_pref_fragment_maxsplit),
+                    value = fragmentMaxSplit,
+                    enabled = fragment,
+                    keyboardNumber = true,
+                    onValueChanged = { fragmentMaxSplit = it }
+                )
+            }
+
+            // 7. Advanced Settings
             CollapsiblePreferenceGroupHeader(
                 title = stringResource(R.string.title_advanced),
                 expanded = advancedSettingsExpanded,
@@ -475,7 +573,7 @@ fun SettingsScreen(
                 }
             }
 
-            // 6. Mode & Root Settings
+            // 8. Mode & Root Settings
             CollapsiblePreferenceGroupHeader(
                 title = stringResource(R.string.title_mode_settings),
                 expanded = modeSettingsExpanded,
@@ -519,7 +617,7 @@ fun SettingsScreen(
                 )
             }
 
-            // 7. Update Settings
+            // 9. Update Settings
             CollapsiblePreferenceGroupHeader(
                 title = stringResource(R.string.title_update_settings),
                 expanded = updateSettingsExpanded,

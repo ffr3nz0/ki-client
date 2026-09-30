@@ -24,6 +24,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -49,6 +51,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
+import com.v2ray.ang.core.CoreServiceManager
 import com.v2ray.ang.core.LauncherManager
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsManager
@@ -60,22 +63,21 @@ import java.net.Inet4Address
 import java.net.NetworkInterface
 
 /**
- * Finds the local IPv4 address of this device (e.g. Wi-Fi IP or Hotspot IP).
+ * Finds the local IP address assigned to this phone on the active Wi-Fi / Hotspot interface.
  */
 private fun findLocalIpAddress(): String {
     try {
-        val interfaces = NetworkInterface.getNetworkInterfaces()
+        val interfaces = NetworkInterface.getNetworkInterfaces() ?: return "192.168.43.1"
         var fallbackIp: String? = null
-        while (interfaces.hasMoreElements()) {
-            val iface = interfaces.nextElement()
-            if (iface.isLoopback || !iface.isUp) continue
-            val addresses = iface.inetAddresses
-            while (addresses.hasMoreElements()) {
-                val addr = addresses.nextElement()
-                if (!addr.isLoopbackAddress && addr is Inet4Address) {
-                    val host = addr.hostAddress.orEmpty()
-                    if (host.startsWith("192.168.43.")) {
-                        // Standard Android hotspot IP
+        for (networkInterface in interfaces) {
+            if (!networkInterface.isUp || networkInterface.isLoopback) continue
+            val name = networkInterface.name.lowercase()
+            val isHotspotOrWifi = name.contains("wlan") || name.contains("ap") || name.contains("swlan") || name.contains("rndis")
+            val addresses = networkInterface.inetAddresses
+            for (address in addresses) {
+                if (!address.isLoopbackAddress && address is Inet4Address) {
+                    val host = address.hostAddress ?: continue
+                    if (isHotspotOrWifi) {
                         return host
                     }
                     if (!host.startsWith("127.")) {
@@ -94,31 +96,28 @@ fun LanShareDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    var isSharingEnabled by remember {
+        mutableStateOf(MmkvManager.decodeSettingsBool(AppConfig.PREF_PROXY_SHARING, false))
+    }
     var localIp by remember { mutableStateOf("192.168.43.1") }
     val httpPort = remember { SettingsManager.getHttpPort() }
     val socksPort = remember { SettingsManager.getSocksPort() }
     var qrBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
-    LaunchedEffect(Unit) {
-        // Automatically enable Allow LAN so local inbound binds to 0.0.0.0
-        val previouslyEnabled = MmkvManager.decodeSettingsBool(AppConfig.PREF_PROXY_SHARING, false)
-        MmkvManager.encodeSettings(AppConfig.PREF_PROXY_SHARING, true)
-        MmkvManager.encodeSettings(AppConfig.PREF_ENABLE_LOCAL_PROXY, true)
-        if (!previouslyEnabled) {
-            LauncherManager.restartService(context)
-        }
+    LaunchedEffect(isSharingEnabled) {
+        if (isSharingEnabled) {
+            val detectedIp = withContext(Dispatchers.IO) {
+                findLocalIpAddress()
+            }
+            localIp = detectedIp
 
-        val detectedIp = withContext(Dispatchers.IO) {
-            findLocalIpAddress()
+            // Generate QR code for http proxy info
+            val proxyUrl = "http://$detectedIp:$httpPort"
+            val qr = withContext(Dispatchers.Default) {
+                QRCodeDecoder.createQRCode(proxyUrl, 500)
+            }
+            qrBitmap = qr
         }
-        localIp = detectedIp
-
-        // Generate QR code for http proxy info
-        val proxyUrl = "http://$detectedIp:$httpPort"
-        val qr = withContext(Dispatchers.Default) {
-            QRCodeDecoder.createQRCode(proxyUrl, 500)
-        }
-        qrBitmap = qr
     }
 
     Dialog(
@@ -144,14 +143,14 @@ fun LanShareDialog(
                     modifier = Modifier
                         .size(54.dp)
                         .clip(CircleShape)
-                        .background(colorFabActive.copy(alpha = 0.15f)),
+                        .background(if (isSharingEnabled) colorFabActive.copy(alpha = 0.15f) else Color(0xFF1F263B)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_share_24dp),
                         contentDescription = null,
                         modifier = Modifier.size(28.dp),
-                        tint = colorFabActive
+                        tint = if (isSharingEnabled) colorFabActive else Color(0xFF94A3B8)
                     )
                 }
 
@@ -177,58 +176,136 @@ fun LanShareDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Copyable Row: IP Address
-                ShareCopyRow(
-                    label = "IP Address",
-                    value = localIp,
-                    onCopy = {
-                        Utils.setClipboard(context, localIp)
-                        Toast.makeText(context, context.getString(R.string.lan_share_copied), Toast.LENGTH_SHORT).show()
+                // Toggle Switch Card
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(if (isSharingEnabled) colorFabActive.copy(alpha = 0.12f) else Color(0xFF1B2236))
+                        .border(
+                            1.dp,
+                            if (isSharingEnabled) colorFabActive.copy(alpha = 0.45f) else Color(0xFF2C3754),
+                            RoundedCornerShape(16.dp)
+                        )
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                        Text(
+                            text = stringResource(R.string.lan_share_switch_title),
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = stringResource(
+                                if (isSharingEnabled) R.string.lan_share_switch_summary_on
+                                else R.string.lan_share_switch_summary_off
+                            ),
+                            color = if (isSharingEnabled) colorFabActive else Color(0xFF8E9AB4),
+                            fontSize = 11.5.sp
+                        )
                     }
-                )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                    Switch(
+                        checked = isSharingEnabled,
+                        onCheckedChange = { enabled ->
+                            isSharingEnabled = enabled
+                            MmkvManager.encodeSettings(AppConfig.PREF_PROXY_SHARING, enabled)
+                            if (enabled) {
+                                MmkvManager.encodeSettings(AppConfig.PREF_ENABLE_LOCAL_PROXY, true)
+                            }
+                            if (CoreServiceManager.isRunning()) {
+                                LauncherManager.restartService(context)
+                            }
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = colorFabActive,
+                            uncheckedThumbColor = Color(0xFF94A3B8),
+                            uncheckedTrackColor = Color(0xFF2C3754)
+                        )
+                    )
+                }
 
-                // Copyable Row: HTTP Proxy
-                ShareCopyRow(
-                    label = "HTTP Proxy",
-                    value = "$localIp:$httpPort",
-                    subValue = "Port: $httpPort",
-                    onCopy = {
-                        Utils.setClipboard(context, "$localIp:$httpPort")
-                        Toast.makeText(context, context.getString(R.string.lan_share_copied), Toast.LENGTH_SHORT).show()
+                if (isSharingEnabled) {
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Copyable Row: IP Address
+                    ShareCopyRow(
+                        label = "IP Address",
+                        value = localIp,
+                        onCopy = {
+                            Utils.setClipboard(context, localIp)
+                            Toast.makeText(context, context.getString(R.string.lan_share_copied), Toast.LENGTH_SHORT).show()
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Copyable Row: HTTP Proxy
+                    ShareCopyRow(
+                        label = "HTTP Proxy",
+                        value = "$localIp:$httpPort",
+                        subValue = "Port: $httpPort",
+                        onCopy = {
+                            Utils.setClipboard(context, "$localIp:$httpPort")
+                            Toast.makeText(context, context.getString(R.string.lan_share_copied), Toast.LENGTH_SHORT).show()
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Copyable Row: SOCKS5 Proxy
+                    ShareCopyRow(
+                        label = "SOCKS5 Proxy",
+                        value = "$localIp:$socksPort",
+                        subValue = "Port: $socksPort",
+                        onCopy = {
+                            Utils.setClipboard(context, "$localIp:$socksPort")
+                            Toast.makeText(context, context.getString(R.string.lan_share_copied), Toast.LENGTH_SHORT).show()
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // QR Code
+                    if (qrBitmap != null) {
+                        Box(
+                            modifier = Modifier
+                                .size(160.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color.White)
+                                .padding(10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                bitmap = qrBitmap!!.asImageBitmap(),
+                                contentDescription = "QR Code",
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Copyable Row: SOCKS5 Proxy
-                ShareCopyRow(
-                    label = "SOCKS5 Proxy",
-                    value = "$localIp:$socksPort",
-                    subValue = "Port: $socksPort",
-                    onCopy = {
-                        Utils.setClipboard(context, "$localIp:$socksPort")
-                        Toast.makeText(context, context.getString(R.string.lan_share_copied), Toast.LENGTH_SHORT).show()
-                    }
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // QR Code
-                if (qrBitmap != null) {
+                } else {
+                    Spacer(modifier = Modifier.height(14.dp))
                     Box(
                         modifier = Modifier
-                            .size(160.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color.White)
-                            .padding(10.dp),
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(Color(0xFF161C2C))
+                            .border(1.dp, Color(0xFF26324A), RoundedCornerShape(14.dp))
+                            .padding(16.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Image(
-                            bitmap = qrBitmap!!.asImageBitmap(),
-                            contentDescription = "QR Code",
-                            modifier = Modifier.fillMaxWidth()
+                        Text(
+                            text = stringResource(R.string.lan_share_disabled_hint),
+                            color = Color(0xFF8E9AB4),
+                            fontSize = 12.sp,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 18.sp
                         )
                     }
                     Spacer(modifier = Modifier.height(16.dp))

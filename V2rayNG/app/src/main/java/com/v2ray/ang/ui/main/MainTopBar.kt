@@ -30,7 +30,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
+import com.v2ray.ang.handler.MmkvManager.rememberMmkvBool
 import com.v2ray.ang.ui.compose.AppTopBar
 import com.v2ray.ang.ui.compose.colorFabActive
 import com.v2ray.ang.ui.compose.verticalScrollbar
@@ -49,6 +51,7 @@ fun MainTopBar(
 ) {
     var showImportMenu by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
+    val isLanSharingActive by rememberMmkvBool(AppConfig.PREF_PROXY_SHARING, false)
     val importMenuScrollState = rememberScrollState()
     val moreMenuScrollState = rememberScrollState()
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
@@ -135,7 +138,7 @@ fun MainTopBar(
                     Icon(
                         painterResource(R.drawable.ic_share_24dp),
                         contentDescription = stringResource(R.string.lan_share_title),
-                        tint = colorFabActive
+                        tint = if (isLanSharingActive) colorFabActive else (if (isDark) Color.White.copy(alpha = 0.65f) else Color(0xFF475569))
                     )
                 }
 

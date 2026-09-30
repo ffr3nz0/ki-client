@@ -594,4 +594,9 @@
     <string name="dns_test_failed">Отвечающих DNS-серверов не обнаружено</string>
     <string name="dns_preset_auto">Умный автовыбор (лучший в сети)</string>
     <string name="dns_preset_custom">Пользовательский (вручную)</string>
+
+    <string name="lan_share_switch_title">Раздача по Wi-Fi / LAN</string>
+    <string name="lan_share_switch_summary_on">Прокси включен для устройств в локальной сети</string>
+    <string name="lan_share_switch_summary_off">Раздача отключена (только это устройство)</string>
+    <string name="lan_share_disabled_hint">Включите переключатель выше, чтобы раздать VPN на Smart TV, ПК или консоль.</string>
 </resources>

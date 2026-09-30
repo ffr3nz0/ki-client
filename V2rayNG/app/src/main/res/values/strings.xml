@@ -606,4 +606,9 @@
     <string name="dns_test_failed">No responsive DNS servers found</string>
     <string name="dns_preset_auto">Smart Auto (Best on connection)</string>
     <string name="dns_preset_custom">Custom (Manual configuration)</string>
+
+    <string name="lan_share_switch_title">Share on Hotspot / Wi-Fi</string>
+    <string name="lan_share_switch_summary_on">Proxy is enabled for devices on local network</string>
+    <string name="lan_share_switch_summary_off">Sharing is disabled (device only)</string>
+    <string name="lan_share_disabled_hint">Turn on the switch above to share your VPN connection with Smart TV, PC, or Game Consoles.</string>
 </resources>
