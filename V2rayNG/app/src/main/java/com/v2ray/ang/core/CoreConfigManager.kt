@@ -230,7 +230,7 @@ object CoreConfigManager {
 
         applyObservability(v2rayConfig, balancerStrategies)
         applySpeedDisabled(v2rayConfig)
-        resolveOutboundDomainsToHosts(v2rayConfig, configContext)
+        resolveOutboundDomainsToHosts(v2rayConfig)
 
         return v2rayConfig
     }
@@ -618,10 +618,11 @@ object CoreConfigManager {
      * Configure local DNS inbounds, outbounds, and routing rules.
      */
     private fun configureLocalDns(configContext: CoreConfigContext, v2rayConfig: V2rayConfig) {
-        val isVpn = SettingsManager.isVpnMode()
-        val isLocalDnsEnabled = MmkvManager.decodeSettingsBool(AppConfig.PREF_LOCAL_DNS_ENABLED) == true
+        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_LOCAL_DNS_ENABLED) != true) {
+            return
+        }
 
-        if (isLocalDnsEnabled && MmkvManager.decodeSettingsBool(AppConfig.PREF_FAKE_DNS_ENABLED) == true) {
+        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_FAKE_DNS_ENABLED) == true) {
             val geositeCn = arrayListOf(AppConfig.GEOSITE_CN)
             val routingDomains = configContext.routingDomainRules
                 .asSequence()
@@ -640,34 +641,38 @@ object CoreConfigManager {
             )
         }
 
-        // In VPN mode or when local DNS is enabled, hijack device port-53 queries into
-        // the core's DNS engine (dns-out) so that apps can resolve domains reliably via
-        // the configured remote resolver (DoH over TCP) rather than leaking raw UDP 53
-        // queries to proxies or networks that drop UDP packets.
-        if (isVpn || isLocalDnsEnabled) {
-            val inboundTag = if (isVpn && !SettingsManager.isUsingHevTun()) "tun" else "socks"
-            if (v2rayConfig.routing.rules.none { it.outboundTag == "dns-out" && it.port == "53" }) {
+        if (SettingsManager.isVpnMode()) {
+            if (SettingsManager.isUsingHevTun()) {
+                //hev-socks5-tunnel dns routing
                 v2rayConfig.routing.rules.add(
                     0, V2rayConfig.RoutingBean.RulesBean(
-                        inboundTag = arrayListOf(inboundTag),
+                        inboundTag = arrayListOf("socks"),
+                        outboundTag = "dns-out",
+                        port = "53",
+                    )
+                )
+            } else {
+                v2rayConfig.routing.rules.add(
+                    0, V2rayConfig.RoutingBean.RulesBean(
+                        inboundTag = arrayListOf("tun"),
                         outboundTag = "dns-out",
                         port = "53",
                     )
                 )
             }
+        }
 
-            // DNS outbound
-            if (v2rayConfig.outbounds.none { e -> e.protocol == "dns" && e.tag == "dns-out" }) {
-                v2rayConfig.outbounds.add(
-                    V2rayConfig.OutboundBean(
-                        protocol = "dns",
-                        tag = "dns-out",
-                        settings = null,
-                        streamSettings = null,
-                        mux = null
-                    )
+        // DNS outbound
+        if (v2rayConfig.outbounds.none { e -> e.protocol == "dns" && e.tag == "dns-out" }) {
+            v2rayConfig.outbounds.add(
+                V2rayConfig.OutboundBean(
+                    protocol = "dns",
+                    tag = "dns-out",
+                    settings = null,
+                    streamSettings = null,
+                    mux = null
                 )
-            }
+            )
         }
     }
 
@@ -1055,39 +1060,20 @@ object CoreConfigManager {
     /**
      * Resolve outbound domains to IPs and write resolved hosts to DNS map.
      */
-    private fun resolveOutboundDomainsToHosts(v2rayConfig: V2rayConfig, configContext: CoreConfigContext? = null) {
-        val dns = v2rayConfig.dns ?: return
-        val newHosts = dns.hosts?.toMutableMap() ?: mutableMapOf()
-        val preferIpv6 = MmkvManager.decodeSettingsBool(AppConfig.PREF_PREFER_IPV6) == true
-
-        // 1. Map plain VLESS clean-IP domains to target IPs so Xray accepts outbound domain syntax
-        if (configContext != null) {
-            for (resolvedOutbound in configContext.resolvedOutbounds) {
-                for (profile in resolvedOutbound.resolvedProfiles) {
-                    val isPlainVless = profile.configType == EConfigType.VLESS &&
-                        (profile.security.isNullOrEmpty() || profile.security == "none")
-                    if (isPlainVless && Utils.isPureIpAddress(profile.server.orEmpty())) {
-                        val hostDomain = profile.host?.takeIf { it.isNotBlank() }
-                            ?: profile.sni?.takeIf { it.isNotBlank() }
-                        if (!hostDomain.isNullOrBlank() && !Utils.isPureIpAddress(hostDomain)) {
-                            newHosts[HttpUtil.toIdnDomain(hostDomain)] = profile.server.orEmpty()
-                        }
-                    }
-                }
-            }
-        }
-
+    private fun resolveOutboundDomainsToHosts(v2rayConfig: V2rayConfig) {
         val resolveMethod = MmkvManager.decodeSettingsString(
             AppConfig.PREF_OUTBOUND_DOMAIN_RESOLVE_METHOD,
             AppConfig.DEFAULT_OUTBOUND_DOMAIN_RESOLVE_METHOD
         )
 
         if (resolveMethod != "1" && resolveMethod != "2") {
-            dns.hosts = newHosts
             return
         }
 
         val proxyOutboundList = v2rayConfig.getAllProxyOutbound()
+        val dns = v2rayConfig.dns ?: return
+        val newHosts = dns.hosts?.toMutableMap() ?: mutableMapOf()
+        val preferIpv6 = MmkvManager.decodeSettingsBool(AppConfig.PREF_PREFER_IPV6) == true
 
         for (item in proxyOutboundList) {
             val domain = item.getServerAddress()

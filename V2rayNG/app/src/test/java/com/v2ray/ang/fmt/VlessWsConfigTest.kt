@@ -93,14 +93,15 @@ class VlessWsConfigTest {
     }
 
     @Test
-    fun testPlainVlessWithIpServerUsesHostDomain() {
+    fun testPlainVlessWithIpServerPreservesServerIp() {
         val vlessUrl = "vless://a3482e88-686a-4a58-8126-99c9df64b7bf@104.21.50.1:2052?path=%2F&security=none&encryption=none&host=pop.raynomusic.com&type=ws#-AmiR"
         val profile = VlessFmt.parse(vlessUrl)
         assertNotNull(profile)
 
         val outbound = CoreOutboundBuilder.convert(profile!!)
         assertNotNull(outbound)
-        // Outbound address must be set to host domain so Xray does not reject the config
-        assertEquals("pop.raynomusic.com", outbound!!.settings?.address)
+        // Server IP must be preserved directly in outbound address without domain-swapping or DNS poisoning
+        assertEquals("104.21.50.1", outbound!!.settings?.address)
+        assertEquals("pop.raynomusic.com", outbound.streamSettings?.wsSettings?.host)
     }
 }

@@ -691,32 +691,12 @@ object CoreOutboundBuilder {
         return true
     }
 
-    private fun isPlainVless(profileItem: ProfileItem): Boolean {
-        return profileItem.configType == EConfigType.VLESS &&
-            (profileItem.security.isNullOrEmpty() || profileItem.security == "none")
-    }
-
     private fun getServerAddress(profileItem: ProfileItem): String {
-        val plainVless = isPlainVless(profileItem)
-
         if (Utils.isPureIpAddress(profileItem.server.orEmpty())) {
-            if (plainVless) {
-                val hostDomain = profileItem.host?.takeIf { it.isNotBlank() }
-                    ?: profileItem.sni?.takeIf { it.isNotBlank() }
-                if (!hostDomain.isNullOrBlank() && !Utils.isPureIpAddress(hostDomain)) {
-                    return HttpUtil.toIdnDomain(hostDomain)
-                }
-            }
             return profileItem.server.orEmpty()
         }
 
         val domain = HttpUtil.toIdnDomain(profileItem.server.orEmpty())
-        // Xray prohibits VLESS without TLS or other encryption if server address is a public IP.
-        // Domain must be preserved so Xray outbound validation succeeds.
-        if (plainVless) {
-            return domain
-        }
-
         if (MmkvManager.decodeSettingsString(AppConfig.PREF_OUTBOUND_DOMAIN_RESOLVE_METHOD, AppConfig.DEFAULT_OUTBOUND_DOMAIN_RESOLVE_METHOD) != "2") {
             return domain
         }
