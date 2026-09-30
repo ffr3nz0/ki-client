@@ -46,7 +46,7 @@ class CoreConfigLocalDnsTest {
     }
 
     @Test
-    fun configureLocalDns_inVpnMode_hijacksPort53EvenWhenLocalDnsDisabled() {
+    fun configureLocalDns_inVpnMode_whenLocalDnsDisabled_doesNotAddDnsOutOrPort53Rule() {
         Mockito.reset(settings)
         // Setup mock MMKV: VPN mode enabled, local DNS preference FALSE
         Mockito.`when`(settings.decodeString(Mockito.eq(AppConfig.PREF_MODE))).thenReturn(AppConfig.VPN)
@@ -78,14 +78,12 @@ class CoreConfigLocalDnsTest {
         method.isAccessible = true
         method.invoke(CoreConfigManager, configContext, v2rayConfig)
 
-        // In VPN mode, port 53 rule routing to dns-out MUST be present to prevent UDP packet drop
+        // When local DNS is disabled in VPN mode, port 53 must not be hijacked to dns-out
         val dnsRule = v2rayConfig.routing.rules.firstOrNull { it.outboundTag == "dns-out" && it.port == "53" }
-        assertNotNull("Port 53 rule routing to dns-out must be present in VPN mode", dnsRule)
-        assertEquals(arrayListOf("socks"), dnsRule?.inboundTag)
+        org.junit.Assert.assertNull("Port 53 rule routing to dns-out must NOT be present when local DNS is disabled", dnsRule)
 
-        // Verify that dns-out outbound was added
         val dnsOutbound = v2rayConfig.outbounds.firstOrNull { it.protocol == "dns" && it.tag == "dns-out" }
-        assertNotNull("dns-out outbound must be present in VPN mode", dnsOutbound)
+        org.junit.Assert.assertNull("dns-out outbound must NOT be present when local DNS is disabled", dnsOutbound)
     }
 
     @Test
@@ -195,7 +193,7 @@ class CoreConfigLocalDnsTest {
     }
 
     @Test
-    fun configureDns_includesFallbackTcpDnsServersAndParallelQuery() {
+    fun configureDns_configuresRemoteDnsServersWithoutTcpFallbacks() {
         val dummyContext: Context = mock()
         val configContext = CoreConfigContext(
             context = dummyContext,
@@ -220,8 +218,8 @@ class CoreConfigLocalDnsTest {
 
         val servers = v2rayConfig.dns?.servers
         assertNotNull(servers)
-        assertTrue("Must contain tcp://1.1.1.1:53 fallback", servers!!.contains("tcp://1.1.1.1:53"))
-        assertTrue("Must contain tcp://8.8.8.8:53 fallback", servers.contains("tcp://8.8.8.8:53"))
-        assertEquals(true, v2rayConfig.dns?.enableParallelQuery)
+        assertTrue("Must contain standard remote DNS", servers!!.contains(AppConfig.DNS_PROXY))
+        assertTrue("Must NOT contain tcp://1.1.1.1:53 fallback", !servers.contains("tcp://1.1.1.1:53"))
+        assertTrue("Must NOT contain tcp://8.8.8.8:53 fallback", !servers.contains("tcp://8.8.8.8:53"))
     }
 }

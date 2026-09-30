@@ -618,10 +618,11 @@ object CoreConfigManager {
      * Configure local DNS inbounds, outbounds, and routing rules.
      */
     private fun configureLocalDns(configContext: CoreConfigContext, v2rayConfig: V2rayConfig) {
-        val isVpn = SettingsManager.isVpnMode()
-        val isLocalDnsEnabled = MmkvManager.decodeSettingsBool(AppConfig.PREF_LOCAL_DNS_ENABLED) == true
+        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_LOCAL_DNS_ENABLED) != true) {
+            return
+        }
 
-        if (isLocalDnsEnabled && MmkvManager.decodeSettingsBool(AppConfig.PREF_FAKE_DNS_ENABLED) == true) {
+        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_FAKE_DNS_ENABLED) == true) {
             val geositeCn = arrayListOf(AppConfig.GEOSITE_CN)
             val routingDomains = configContext.routingDomainRules
                 .asSequence()
@@ -640,34 +641,38 @@ object CoreConfigManager {
             )
         }
 
-        // In VPN mode or when local DNS is enabled, hijack device port-53 queries into
-        // the core's DNS engine (dns-out) so that apps can resolve domains reliably via
-        // the configured remote resolver (over TCP proxy tunnel) rather than leaking raw UDP 53
-        // queries to proxies or networks that drop UDP packets.
-        if (isVpn || isLocalDnsEnabled) {
-            val inboundTag = if (isVpn && !SettingsManager.isUsingHevTun()) "tun" else "socks"
-            if (v2rayConfig.routing.rules.none { it.outboundTag == "dns-out" && it.port == "53" }) {
+        if (SettingsManager.isVpnMode()) {
+            if (SettingsManager.isUsingHevTun()) {
+                //hev-socks5-tunnel dns routing
                 v2rayConfig.routing.rules.add(
                     0, V2rayConfig.RoutingBean.RulesBean(
-                        inboundTag = arrayListOf(inboundTag),
+                        inboundTag = arrayListOf("socks"),
+                        outboundTag = "dns-out",
+                        port = "53",
+                    )
+                )
+            } else {
+                v2rayConfig.routing.rules.add(
+                    0, V2rayConfig.RoutingBean.RulesBean(
+                        inboundTag = arrayListOf("tun"),
                         outboundTag = "dns-out",
                         port = "53",
                     )
                 )
             }
+        }
 
-            // DNS outbound
-            if (v2rayConfig.outbounds.none { e -> e.protocol == "dns" && e.tag == "dns-out" }) {
-                v2rayConfig.outbounds.add(
-                    V2rayConfig.OutboundBean(
-                        protocol = "dns",
-                        tag = "dns-out",
-                        settings = null,
-                        streamSettings = null,
-                        mux = null
-                    )
+        // DNS outbound
+        if (v2rayConfig.outbounds.none { e -> e.protocol == "dns" && e.tag == "dns-out" }) {
+            v2rayConfig.outbounds.add(
+                V2rayConfig.OutboundBean(
+                    protocol = "dns",
+                    tag = "dns-out",
+                    settings = null,
+                    streamSettings = null,
+                    mux = null
                 )
-            }
+            )
         }
     }
 
@@ -868,22 +873,14 @@ object CoreConfigManager {
         val remoteDns = SettingsManager.getRemoteDnsServers()
         val domesticDns = SettingsManager.getDomesticDnsServers()
 
-        val remoteDnsList = remoteDns.toMutableList()
-        val fallbackTcpDns = listOf("tcp://1.1.1.1:53", "tcp://8.8.8.8:53")
-        for (fallback in fallbackTcpDns) {
-            if (!remoteDnsList.contains(fallback)) {
-                remoteDnsList.add(fallback)
-            }
-        }
-
-        remoteDnsList.forEach { servers.add(it) }
+        remoteDns.forEach { servers.add(it) }
 
         val hosts = buildDnsHostsFromRoutingRules(configContext)
         val cnDomesticDnsTags = buildDnsCnModeFromRoutingRules(configContext, servers, domesticDns)
         val domesticDnsTags = buildDnsFromRoutingRules(
             configContext = configContext,
             servers = servers,
-            remoteDns = remoteDnsList,
+            remoteDns = remoteDns,
             domesticDns = domesticDns
         )
         domesticDnsTags.addAll(cnDomesticDnsTags)
@@ -892,7 +889,7 @@ object CoreConfigManager {
             servers = servers,
             hosts = hosts,
             tag = AppConfig.TAG_DNS,
-            enableParallelQuery = true
+            enableParallelQuery = if ((domesticDns.size + remoteDns.size) > 2) true else null
         )
 
         if (domesticDnsTags.isNotEmpty()) {
@@ -1064,12 +1061,7 @@ object CoreConfigManager {
      * Resolve outbound domains to IPs and write resolved hosts to DNS map.
      */
     private fun resolveOutboundDomainsToHosts(v2rayConfig: V2rayConfig) {
-        val resolveMethod = MmkvManager.decodeSettingsString(
-            AppConfig.PREF_OUTBOUND_DOMAIN_RESOLVE_METHOD,
-            AppConfig.DEFAULT_OUTBOUND_DOMAIN_RESOLVE_METHOD
-        )
-
-        if (resolveMethod != "1" && resolveMethod != "2") {
+        if (MmkvManager.decodeSettingsString(AppConfig.PREF_OUTBOUND_DOMAIN_RESOLVE_METHOD, AppConfig.DEFAULT_OUTBOUND_DOMAIN_RESOLVE_METHOD) != "1") {
             return
         }
 
