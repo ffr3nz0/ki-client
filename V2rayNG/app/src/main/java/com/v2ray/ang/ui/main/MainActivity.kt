@@ -171,9 +171,6 @@ class MainActivity : HelperBaseComponentActivity() {
         if (mainViewModel.uiState.value.isRunning) {
             LauncherManager.stopService(this)
         } else {
-            lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                DnsSelectorManager.ensureDnsHealthy(this@MainActivity)
-            }
             requestServiceStart()
         }
     }

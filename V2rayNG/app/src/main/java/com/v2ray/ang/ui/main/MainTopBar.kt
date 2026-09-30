@@ -61,6 +61,7 @@ fun MainTopBar(
     val appName = stringResource(R.string.app_name)
     val isDark = com.v2ray.ang.ui.compose.LocalDarkTheme.current
     val titleTextColor = if (isDark) Color.White else Color(0xFF1E293B)
+    val iconTintColor = if (isDark) Color.White else Color(0xFF1E293B)
     val annotatedTitle = remember(appName, titleTextColor) {
         buildAnnotatedString {
             if (appName.contains("-Client", ignoreCase = true)) {
@@ -111,7 +112,7 @@ fun MainTopBar(
                     Icon(
                         painterResource(R.drawable.ic_arrow_back_24dp),
                         contentDescription = stringResource(R.string.acc_back),
-                        tint = Color.White
+                        tint = iconTintColor
                     )
                 }
             } else {
@@ -130,7 +131,7 @@ fun MainTopBar(
                     Icon(
                         painterResource(R.drawable.ic_search_24dp),
                         contentDescription = stringResource(R.string.acc_search),
-                        tint = Color.White
+                        tint = iconTintColor
                     )
                 }
 
@@ -147,7 +148,7 @@ fun MainTopBar(
                         Icon(
                             painterResource(R.drawable.ic_add_24dp),
                             contentDescription = stringResource(R.string.acc_add),
-                            tint = Color.White
+                            tint = iconTintColor
                         )
                     }
 
@@ -172,7 +173,7 @@ fun MainTopBar(
                         Icon(
                             painterResource(R.drawable.ic_more_vert_24dp),
                             contentDescription = stringResource(R.string.acc_more),
-                            tint = Color.White
+                            tint = iconTintColor
                         )
                     }
 

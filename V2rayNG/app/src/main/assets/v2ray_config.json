@@ -6,10 +6,10 @@
   "policy":{
       "levels": {
         "8": {
-          "handshake": 4,
+          "handshake": 10,
           "connIdle": 300,
-          "uplinkOnly": 1,
-          "downlinkOnly": 1
+          "uplinkOnly": 2,
+          "downlinkOnly": 5
         }
       },
       "system": {
@@ -30,8 +30,7 @@
       "enabled": true,
       "destOverride": [
         "http",
-        "tls",
-		"quic"
+        "tls"
       ]
     }
   }

@@ -1111,15 +1111,23 @@ object CoreConfigManager {
                 continue
             }
 
+            // Filter out known ISP DNS-poisoned/bogus IP addresses (e.g. 10.10.34.34 in Iran)
+            val cleanIps = resolvedIps.filterNot { ip ->
+                ip == "10.10.34.34" || (!domain.endsWith(".local") && (ip.startsWith("10.") || ip.startsWith("127.") || ip.startsWith("192.168.")))
+            }
+            if (cleanIps.isEmpty()) {
+                continue
+            }
+
             item.ensureSockopt().domainStrategy = "UseIP"
             item.ensureSockopt().happyEyeballs = V2rayConfig.OutboundBean.StreamSettingsBean.HappyEyeballsBean(
                 prioritizeIPv6 = preferIpv6,
                 interleave = 2
             )
-            newHosts[domain] = if (resolvedIps.size == 1) {
-                resolvedIps[0]
+            newHosts[domain] = if (cleanIps.size == 1) {
+                cleanIps[0]
             } else {
-                resolvedIps
+                cleanIps
             }
         }
 

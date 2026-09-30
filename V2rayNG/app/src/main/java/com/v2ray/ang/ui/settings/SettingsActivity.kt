@@ -111,15 +111,15 @@ fun SettingsScreen(
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val systemVpnSettingsAvailable by viewModel.systemVpnSettingsAvailable.collectAsStateWithLifecycle()
 
-    var uiSettingsExpanded by rememberSaveable { mutableStateOf(true) }
-    var vpnSettingsExpanded by rememberSaveable { mutableStateOf(true) }
-    var dnsSettingsExpanded by rememberSaveable { mutableStateOf(true) }
-    var coreSettingsExpanded by rememberSaveable { mutableStateOf(true) }
+    var uiSettingsExpanded by rememberSaveable { mutableStateOf(false) }
+    var vpnSettingsExpanded by rememberSaveable { mutableStateOf(false) }
+    var dnsSettingsExpanded by rememberSaveable { mutableStateOf(false) }
+    var coreSettingsExpanded by rememberSaveable { mutableStateOf(false) }
     var muxSettingsExpanded by rememberSaveable { mutableStateOf(false) }
     var fragmentSettingsExpanded by rememberSaveable { mutableStateOf(false) }
-    var advancedSettingsExpanded by rememberSaveable { mutableStateOf(true) }
-    var modeSettingsExpanded by rememberSaveable { mutableStateOf(true) }
-    var updateSettingsExpanded by rememberSaveable { mutableStateOf(true) }
+    var advancedSettingsExpanded by rememberSaveable { mutableStateOf(false) }
+    var modeSettingsExpanded by rememberSaveable { mutableStateOf(false) }
+    var updateSettingsExpanded by rememberSaveable { mutableStateOf(false) }
 
     // --- UI Settings ---
     var liquidGlassEnabled by rememberMmkvBool(AppConfig.PREF_LIQUID_GLASS_ENABLED, true)
@@ -151,9 +151,9 @@ fun SettingsScreen(
 
     val dnsPresetEntries = listOf(
         stringResource(R.string.dns_preset_auto),
-        "Cloudflare (1.1.1.1 / DoH)",
-        "Google (8.8.8.8 / DoH)",
-        "Quad9 (9.9.9.9 / Secure)",
+        "Cloudflare (1.1.1.1 / 1.0.0.1)",
+        "Google (8.8.8.8 / 8.8.4.4)",
+        "Quad9 (9.9.9.9 / 149.112.112.112)",
         "OpenDNS Cisco (208.67.222.222)",
         "AdGuard DNS (94.140.14.14)",
         "Control D (76.76.2.0)",

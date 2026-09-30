@@ -50,6 +50,7 @@ import com.v2ray.ang.handler.AppUpdateManager
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.ui.compose.InAppUpdateDialog
 import com.v2ray.ang.ui.compose.LanShareDialog
+import com.v2ray.ang.ui.compose.LocalDarkTheme
 import com.v2ray.ang.ui.compose.QRCodeDialog
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -85,6 +86,7 @@ fun MainScreen(
         }
     }
 
+    val isDark = LocalDarkTheme.current
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var showSearch by remember { mutableStateOf(false) }
@@ -239,7 +241,7 @@ fun MainScreen(
             },
             bottomBar = {},
             floatingActionButton = {},
-            containerColor = Color(0xFF0B0D14)
+            containerColor = if (isDark) Color(0xFF0B0D14) else MaterialTheme.colorScheme.background
         ) { innerPadding ->
             if (groups.isNotEmpty()) {
                 Column(

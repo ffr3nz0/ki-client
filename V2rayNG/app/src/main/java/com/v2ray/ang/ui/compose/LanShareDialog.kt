@@ -120,6 +120,8 @@ fun LanShareDialog(
         }
     }
 
+    val isDark = LocalDarkTheme.current
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -128,8 +130,8 @@ fun LanShareDialog(
             modifier = Modifier
                 .fillMaxWidth(0.92f)
                 .clip(RoundedCornerShape(24.dp))
-                .border(1.dp, Color(0xFF28314A), RoundedCornerShape(24.dp)),
-            color = Color(0xFF121624),
+                .border(1.dp, if (isDark) Color(0xFF28314A) else Color(0xFFE2E8F0), RoundedCornerShape(24.dp)),
+            color = if (isDark) Color(0xFF121624) else Color(0xFFFFFFFF),
             shape = RoundedCornerShape(24.dp)
         ) {
             Column(
@@ -143,14 +145,14 @@ fun LanShareDialog(
                     modifier = Modifier
                         .size(54.dp)
                         .clip(CircleShape)
-                        .background(if (isSharingEnabled) colorFabActive.copy(alpha = 0.15f) else Color(0xFF1F263B)),
+                        .background(if (isSharingEnabled) colorFabActive.copy(alpha = 0.15f) else (if (isDark) Color(0xFF1F263B) else Color(0xFFF1F5F9))),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_share_24dp),
                         contentDescription = null,
                         modifier = Modifier.size(28.dp),
-                        tint = if (isSharingEnabled) colorFabActive else Color(0xFF94A3B8)
+                        tint = if (isSharingEnabled) colorFabActive else (if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B))
                     )
                 }
 
@@ -158,7 +160,7 @@ fun LanShareDialog(
 
                 Text(
                     text = stringResource(R.string.lan_share_title),
-                    color = Color.White,
+                    color = if (isDark) Color.White else Color(0xFF0F172A),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
@@ -168,7 +170,7 @@ fun LanShareDialog(
 
                 Text(
                     text = stringResource(R.string.lan_share_desc),
-                    color = Color(0xFF94A3B8),
+                    color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B),
                     fontSize = 12.5.sp,
                     textAlign = TextAlign.Center,
                     lineHeight = 18.sp
@@ -181,10 +183,10 @@ fun LanShareDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
-                        .background(if (isSharingEnabled) colorFabActive.copy(alpha = 0.12f) else Color(0xFF1B2236))
+                        .background(if (isSharingEnabled) colorFabActive.copy(alpha = 0.12f) else (if (isDark) Color(0xFF1B2236) else Color(0xFFF8FAFC)))
                         .border(
                             1.dp,
-                            if (isSharingEnabled) colorFabActive.copy(alpha = 0.45f) else Color(0xFF2C3754),
+                            if (isSharingEnabled) colorFabActive.copy(alpha = 0.45f) else (if (isDark) Color(0xFF2C3754) else Color(0xFFE2E8F0)),
                             RoundedCornerShape(16.dp)
                         )
                         .padding(horizontal = 14.dp, vertical = 12.dp),
@@ -194,7 +196,7 @@ fun LanShareDialog(
                     Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
                         Text(
                             text = stringResource(R.string.lan_share_switch_title),
-                            color = Color.White,
+                            color = if (isDark) Color.White else Color(0xFF0F172A),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -204,7 +206,7 @@ fun LanShareDialog(
                                 if (isSharingEnabled) R.string.lan_share_switch_summary_on
                                 else R.string.lan_share_switch_summary_off
                             ),
-                            color = if (isSharingEnabled) colorFabActive else Color(0xFF8E9AB4),
+                            color = if (isSharingEnabled) colorFabActive else (if (isDark) Color(0xFF8E9AB4) else Color(0xFF64748B)),
                             fontSize = 11.5.sp
                         )
                     }
@@ -224,8 +226,8 @@ fun LanShareDialog(
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
                             checkedTrackColor = colorFabActive,
-                            uncheckedThumbColor = Color(0xFF94A3B8),
-                            uncheckedTrackColor = Color(0xFF2C3754)
+                            uncheckedThumbColor = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B),
+                            uncheckedTrackColor = if (isDark) Color(0xFF2C3754) else Color(0xFFCBD5E1)
                         )
                     )
                 }
@@ -295,14 +297,14 @@ fun LanShareDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(14.dp))
-                            .background(Color(0xFF161C2C))
-                            .border(1.dp, Color(0xFF26324A), RoundedCornerShape(14.dp))
+                            .background(if (isDark) Color(0xFF161C2C) else Color(0xFFF1F5F9))
+                            .border(1.dp, if (isDark) Color(0xFF26324A) else Color(0xFFE2E8F0), RoundedCornerShape(14.dp))
                             .padding(16.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = stringResource(R.string.lan_share_disabled_hint),
-                            color = Color(0xFF8E9AB4),
+                            color = if (isDark) Color(0xFF8E9AB4) else Color(0xFF64748B),
                             fontSize = 12.sp,
                             textAlign = TextAlign.Center,
                             lineHeight = 18.sp
@@ -339,12 +341,13 @@ private fun ShareCopyRow(
     subValue: String? = null,
     onCopy: () -> Unit
 ) {
+    val isDark = LocalDarkTheme.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF1B2236))
-            .border(1.dp, Color(0xFF2C3754), RoundedCornerShape(12.dp))
+            .background(if (isDark) Color(0xFF1B2236) else Color(0xFFF8FAFC))
+            .border(1.dp, if (isDark) Color(0xFF2C3754) else Color(0xFFE2E8F0), RoundedCornerShape(12.dp))
             .clickable { onCopy() }
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -353,14 +356,14 @@ private fun ShareCopyRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = label,
-                color = Color(0xFF8E9AB4),
+                color = if (isDark) Color(0xFF8E9AB4) else Color(0xFF64748B),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = value,
-                color = Color.White,
+                color = if (isDark) Color.White else Color(0xFF0F172A),
                 fontSize = 13.5.sp,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
@@ -372,7 +375,7 @@ private fun ShareCopyRow(
             modifier = Modifier
                 .size(34.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF27314E)),
+                .background(if (isDark) Color(0xFF27314E) else Color(0xFFE2E8F0)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
