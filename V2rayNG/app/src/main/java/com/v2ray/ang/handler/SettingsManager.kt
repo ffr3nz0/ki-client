@@ -481,11 +481,6 @@ object SettingsManager {
         ensureDefaultValue(AppConfig.PREF_OBSERVATORY_LEAST_LOAD_SAMPLING, AppConfig.OBSERVATORY_LEAST_LOAD_SAMPLING)
         ensureDefaultValue(AppConfig.PREF_OBSERVATORY_LEAST_LOAD_TIMEOUT, AppConfig.OBSERVATORY_LEAST_LOAD_TIMEOUT)
 
-        // Heal legacy or pure-IP remote DNS to reliable DoH proxy resolver to prevent UDP stalls
-        val existingRemoteDns = MmkvManager.decodeSettingsString(AppConfig.PREF_REMOTE_DNS)
-        if (existingRemoteDns.isNullOrEmpty() || Utils.isPureIpAddress(existingRemoteDns.substringBefore(","))) {
-            MmkvManager.encodeSettings(AppConfig.PREF_REMOTE_DNS, AppConfig.DNS_PROXY)
-        }
         val existingVpnDns = MmkvManager.decodeSettingsString(AppConfig.PREF_VPN_DNS)
         if (existingVpnDns.isNullOrEmpty()) {
             MmkvManager.encodeSettings(AppConfig.PREF_VPN_DNS, AppConfig.DNS_VPN)

@@ -46,12 +46,15 @@ class CoreConfigLocalDnsTest {
     }
 
     @Test
-    fun configureLocalDns_whenLocalDnsDisabled_doesNotAddDnsOutOrPort53Rule() {
+    fun configureLocalDns_inVpnMode_hijacksPort53EvenWhenLocalDnsDisabled() {
+        Mockito.reset(settings)
         // Setup mock MMKV: VPN mode enabled, local DNS preference FALSE
-        Mockito.`when`(settings.decodeString(AppConfig.PREF_MODE)).thenReturn(AppConfig.VPN)
-        Mockito.`when`(settings.decodeBool(AppConfig.PREF_LOCAL_DNS_ENABLED, false)).thenReturn(false)
-        Mockito.`when`(settings.decodeBool(AppConfig.PREF_LOCAL_DNS_ENABLED)).thenReturn(false)
-        Mockito.`when`(settings.decodeBool(AppConfig.PREF_USE_HEV_TUNNEL, true)).thenReturn(true)
+        Mockito.`when`(settings.decodeString(Mockito.eq(AppConfig.PREF_MODE))).thenReturn(AppConfig.VPN)
+        Mockito.`when`(settings.decodeString(Mockito.eq(AppConfig.PREF_MODE), Mockito.any())).thenReturn(AppConfig.VPN)
+        Mockito.`when`(settings.decodeBool(Mockito.eq(AppConfig.PREF_LOCAL_DNS_ENABLED), Mockito.anyBoolean())).thenReturn(false)
+        Mockito.`when`(settings.decodeBool(Mockito.eq(AppConfig.PREF_LOCAL_DNS_ENABLED))).thenReturn(false)
+        Mockito.`when`(settings.decodeBool(Mockito.eq(AppConfig.PREF_USE_HEV_TUNNEL), Mockito.anyBoolean())).thenReturn(true)
+        Mockito.`when`(settings.decodeBool(Mockito.eq(AppConfig.PREF_USE_HEV_TUNNEL))).thenReturn(true)
 
         val v2rayConfig = V2rayConfig(
             log = V2rayConfig.LogBean(),
@@ -75,22 +78,65 @@ class CoreConfigLocalDnsTest {
         method.isAccessible = true
         method.invoke(CoreConfigManager, configContext, v2rayConfig)
 
-        // Verify that port 53 rule routing to dns-out was NOT added
+        // In VPN mode, port 53 rule routing to dns-out MUST be present to prevent UDP packet drop
         val dnsRule = v2rayConfig.routing.rules.firstOrNull { it.outboundTag == "dns-out" && it.port == "53" }
-        org.junit.Assert.assertNull("Port 53 rule must not be present when local DNS is disabled", dnsRule)
+        assertNotNull("Port 53 rule routing to dns-out must be present in VPN mode", dnsRule)
+        assertEquals(arrayListOf("socks"), dnsRule?.inboundTag)
 
-        // Verify that dns-out outbound was NOT added
+        // Verify that dns-out outbound was added
         val dnsOutbound = v2rayConfig.outbounds.firstOrNull { it.protocol == "dns" && it.tag == "dns-out" }
-        org.junit.Assert.assertNull("dns-out outbound must not be present when local DNS is disabled", dnsOutbound)
+        assertNotNull("dns-out outbound must be present in VPN mode", dnsOutbound)
+    }
+
+    @Test
+    fun configureLocalDns_whenNotVpnAndLocalDnsDisabled_doesNotAddDnsOutOrPort53Rule() {
+        Mockito.reset(settings)
+        // Setup mock MMKV: Not VPN mode (e.g. proxy-only), local DNS preference FALSE
+        Mockito.`when`(settings.decodeString(Mockito.eq(AppConfig.PREF_MODE))).thenReturn("PROXY_ONLY")
+        Mockito.`when`(settings.decodeString(Mockito.eq(AppConfig.PREF_MODE), Mockito.any())).thenReturn("PROXY_ONLY")
+        Mockito.`when`(settings.decodeBool(Mockito.eq(AppConfig.PREF_LOCAL_DNS_ENABLED), Mockito.anyBoolean())).thenReturn(false)
+        Mockito.`when`(settings.decodeBool(Mockito.eq(AppConfig.PREF_LOCAL_DNS_ENABLED))).thenReturn(false)
+
+        val v2rayConfig = V2rayConfig(
+            log = V2rayConfig.LogBean(),
+            inbounds = arrayListOf(),
+            outbounds = arrayListOf(),
+            routing = V2rayConfig.RoutingBean(domainStrategy = "AsIs", rules = arrayListOf()),
+            dns = V2rayConfig.DnsBean(servers = arrayListOf(), hosts = mutableMapOf())
+        )
+
+        val dummyContext: Context = mock()
+        val configContext = CoreConfigContext(
+            context = dummyContext,
+            guid = "test-guid"
+        )
+
+        val method = CoreConfigManager::class.java.getDeclaredMethod(
+            "configureLocalDns",
+            CoreConfigContext::class.java,
+            V2rayConfig::class.java
+        )
+        method.isAccessible = true
+        method.invoke(CoreConfigManager, configContext, v2rayConfig)
+
+        // When not in VPN mode and local DNS disabled, port 53 rule should not be added
+        val dnsRule = v2rayConfig.routing.rules.firstOrNull { it.outboundTag == "dns-out" && it.port == "53" }
+        org.junit.Assert.assertNull("Port 53 rule must not be present when not in VPN mode and local DNS is disabled", dnsRule)
+
+        val dnsOutbound = v2rayConfig.outbounds.firstOrNull { it.protocol == "dns" && it.tag == "dns-out" }
+        org.junit.Assert.assertNull("dns-out outbound must not be present when not in VPN mode and local DNS is disabled", dnsOutbound)
     }
 
     @Test
     fun configureLocalDns_whenLocalDnsEnabled_inVpnMode_hijacksPort53() {
+        Mockito.reset(settings)
         // Setup mock MMKV: VPN mode enabled, local DNS preference TRUE
-        Mockito.`when`(settings.decodeString(AppConfig.PREF_MODE)).thenReturn(AppConfig.VPN)
-        Mockito.`when`(settings.decodeBool(AppConfig.PREF_LOCAL_DNS_ENABLED, false)).thenReturn(true)
-        Mockito.`when`(settings.decodeBool(AppConfig.PREF_LOCAL_DNS_ENABLED)).thenReturn(true)
-        Mockito.`when`(settings.decodeBool(AppConfig.PREF_USE_HEV_TUNNEL, true)).thenReturn(true)
+        Mockito.`when`(settings.decodeString(Mockito.eq(AppConfig.PREF_MODE))).thenReturn(AppConfig.VPN)
+        Mockito.`when`(settings.decodeString(Mockito.eq(AppConfig.PREF_MODE), Mockito.any())).thenReturn(AppConfig.VPN)
+        Mockito.`when`(settings.decodeBool(Mockito.eq(AppConfig.PREF_LOCAL_DNS_ENABLED), Mockito.anyBoolean())).thenReturn(true)
+        Mockito.`when`(settings.decodeBool(Mockito.eq(AppConfig.PREF_LOCAL_DNS_ENABLED))).thenReturn(true)
+        Mockito.`when`(settings.decodeBool(Mockito.eq(AppConfig.PREF_USE_HEV_TUNNEL), Mockito.anyBoolean())).thenReturn(true)
+        Mockito.`when`(settings.decodeBool(Mockito.eq(AppConfig.PREF_USE_HEV_TUNNEL))).thenReturn(true)
 
         val v2rayConfig = V2rayConfig(
             log = V2rayConfig.LogBean(),
@@ -146,5 +192,36 @@ class CoreConfigLocalDnsTest {
         assertTrue("Must contain AdGuard DoH host", hosts.containsKey("dns.adguard-dns.com"))
         assertTrue("Must contain Control D DoH host", hosts.containsKey("freedns.controld.com"))
         assertTrue("Must contain OpenDNS DoH host", hosts.containsKey("doh.opendns.com"))
+    }
+
+    @Test
+    fun configureDns_includesFallbackTcpDnsServersAndParallelQuery() {
+        val dummyContext: Context = mock()
+        val configContext = CoreConfigContext(
+            context = dummyContext,
+            guid = "test-guid"
+        )
+        val v2rayConfig = V2rayConfig(
+            log = V2rayConfig.LogBean(),
+            inbounds = arrayListOf(),
+            outbounds = arrayListOf(),
+            routing = V2rayConfig.RoutingBean(domainStrategy = "AsIs", rules = arrayListOf()),
+            dns = V2rayConfig.DnsBean(servers = arrayListOf(), hosts = mutableMapOf())
+        )
+
+        val method = CoreConfigManager::class.java.getDeclaredMethod(
+            "configureDns",
+            CoreConfigContext::class.java,
+            V2rayConfig::class.java,
+            Map::class.java
+        )
+        method.isAccessible = true
+        method.invoke(CoreConfigManager, configContext, v2rayConfig, emptyMap<String, String>())
+
+        val servers = v2rayConfig.dns?.servers
+        assertNotNull(servers)
+        assertTrue("Must contain tcp://1.1.1.1:53 fallback", servers!!.contains("tcp://1.1.1.1:53"))
+        assertTrue("Must contain tcp://8.8.8.8:53 fallback", servers.contains("tcp://8.8.8.8:53"))
+        assertEquals(true, v2rayConfig.dns?.enableParallelQuery)
     }
 }
