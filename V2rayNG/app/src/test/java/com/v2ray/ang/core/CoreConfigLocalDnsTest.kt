@@ -7,6 +7,7 @@ import com.v2ray.ang.AppConfig
 import com.v2ray.ang.dto.CoreConfigContext
 import com.v2ray.ang.dto.V2rayConfig
 import com.v2ray.ang.handler.MmkvManager
+import com.v2ray.ang.handler.SettingsManager
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -221,5 +222,45 @@ class CoreConfigLocalDnsTest {
         assertTrue("Must contain standard remote DNS", servers!!.contains(AppConfig.DNS_PROXY))
         assertTrue("Must NOT contain tcp://1.1.1.1:53 fallback", !servers.contains("tcp://1.1.1.1:53"))
         assertTrue("Must NOT contain tcp://8.8.8.8:53 fallback", !servers.contains("tcp://8.8.8.8:53"))
+    }
+
+    @Test
+    fun testGetVpnDnsServers_withBlankOrEmptyFallsBackToDefault() {
+        Mockito.reset(settings)
+        Mockito.`when`(settings.decodeString(Mockito.eq(AppConfig.PREF_VPN_DNS))).thenReturn("")
+        val servers = SettingsManager.getVpnDnsServers()
+        assertEquals(listOf(AppConfig.DNS_VPN), servers)
+    }
+
+    @Test
+    fun testGetVpnDnsServers_withPollutedInvalidIpsFallsBackToDefault() {
+        Mockito.reset(settings)
+        Mockito.`when`(settings.decodeString(Mockito.eq(AppConfig.PREF_VPN_DNS))).thenReturn("invalid_domain, not_an_ip")
+        val servers = SettingsManager.getVpnDnsServers()
+        assertEquals(listOf(AppConfig.DNS_VPN), servers)
+    }
+
+    @Test
+    fun testGetVpnDnsServers_withValidIpsTrimsProperly() {
+        Mockito.reset(settings)
+        Mockito.`when`(settings.decodeString(Mockito.eq(AppConfig.PREF_VPN_DNS))).thenReturn(" 1.1.1.1 , 8.8.8.8 ")
+        val servers = SettingsManager.getVpnDnsServers()
+        assertEquals(listOf("1.1.1.1", "8.8.8.8"), servers)
+    }
+
+    @Test
+    fun testGetRemoteDnsServers_withEmptyFallsBackToDefault() {
+        Mockito.reset(settings)
+        Mockito.`when`(settings.decodeString(Mockito.eq(AppConfig.PREF_REMOTE_DNS))).thenReturn("")
+        val servers = SettingsManager.getRemoteDnsServers()
+        assertEquals(listOf(AppConfig.DNS_PROXY), servers)
+    }
+
+    @Test
+    fun testGetDomesticDnsServers_withEmptyFallsBackToDefault() {
+        Mockito.reset(settings)
+        Mockito.`when`(settings.decodeString(Mockito.eq(AppConfig.PREF_DOMESTIC_DNS))).thenReturn("")
+        val servers = SettingsManager.getDomesticDnsServers()
+        assertEquals(listOf(AppConfig.DNS_DIRECT), servers)
     }
 }

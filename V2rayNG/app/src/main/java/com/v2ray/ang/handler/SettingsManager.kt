@@ -38,6 +38,7 @@ object SettingsManager {
     private var runtimeSocksPort: Int? = null
 
     fun initApp(context: Context) {
+        migrateAndSanitizeDnsSettings()
         ensureDefaultSettings()
         //ensureDefaultSubscription()
         initRoutingRulesets(context)
@@ -332,8 +333,8 @@ object SettingsManager {
      */
     fun getDomesticDnsServers(): List<String> {
         val domesticDns =
-            MmkvManager.decodeSettingsString(AppConfig.PREF_DOMESTIC_DNS) ?: AppConfig.DNS_DIRECT
-        val ret = domesticDns.split(",").filter { Utils.isPureIpAddress(it) || Utils.isCoreDNSAddress(it) }
+            MmkvManager.decodeSettingsString(AppConfig.PREF_DOMESTIC_DNS)?.takeIf { it.isNotBlank() } ?: AppConfig.DNS_DIRECT
+        val ret = domesticDns.split(",").map { it.trim() }.filter { Utils.isPureIpAddress(it) || Utils.isCoreDNSAddress(it) }
         if (ret.isEmpty()) {
             return listOf(AppConfig.DNS_DIRECT)
         }
@@ -346,8 +347,8 @@ object SettingsManager {
      */
     fun getRemoteDnsServers(): List<String> {
         val remoteDns =
-            MmkvManager.decodeSettingsString(AppConfig.PREF_REMOTE_DNS) ?: AppConfig.DNS_PROXY
-        val ret = remoteDns.split(",").filter { Utils.isPureIpAddress(it) || Utils.isCoreDNSAddress(it) }
+            MmkvManager.decodeSettingsString(AppConfig.PREF_REMOTE_DNS)?.takeIf { it.isNotBlank() } ?: AppConfig.DNS_PROXY
+        val ret = remoteDns.split(",").map { it.trim() }.filter { Utils.isPureIpAddress(it) || Utils.isCoreDNSAddress(it) }
         if (ret.isEmpty()) {
             return listOf(AppConfig.DNS_PROXY)
         }
@@ -359,8 +360,9 @@ object SettingsManager {
      * @return A list of VPN DNS servers.
      */
     fun getVpnDnsServers(): List<String> {
-        val vpnDns = MmkvManager.decodeSettingsString(AppConfig.PREF_VPN_DNS) ?: AppConfig.DNS_VPN
-        return vpnDns.split(",").filter { Utils.isPureIpAddress(it) }
+        val vpnDns = MmkvManager.decodeSettingsString(AppConfig.PREF_VPN_DNS)?.takeIf { it.isNotBlank() } ?: AppConfig.DNS_VPN
+        val ret = vpnDns.split(",").map { it.trim() }.filter { Utils.isPureIpAddress(it) }
+        return if (ret.isEmpty()) listOf(AppConfig.DNS_VPN) else ret
     }
 
     /**
@@ -491,6 +493,24 @@ object SettingsManager {
         if (MmkvManager.decodeSettingsString(key).isNullOrEmpty()) {
             MmkvManager.encodeSettings(key, default)
         }
+    }
+
+    private fun migrateAndSanitizeDnsSettings() {
+        val migrationKey = "sanitize_dns_settings_v259"
+        if (MmkvManager.decodeSettingsBool(migrationKey, false)) {
+            return
+        }
+
+        // Force reset remote DNS, VPN DNS, and domestic DNS to known-good defaults to heal polluted states
+        MmkvManager.encodeSettings(AppConfig.PREF_REMOTE_DNS, AppConfig.DNS_PROXY)
+        MmkvManager.encodeSettings(AppConfig.PREF_VPN_DNS, AppConfig.DNS_VPN)
+        MmkvManager.encodeSettings(AppConfig.PREF_DOMESTIC_DNS, AppConfig.DNS_DIRECT)
+        MmkvManager.encodeSettings(AppConfig.PREF_LOCAL_DNS_ENABLED, false)
+        MmkvManager.encodeSettings(AppConfig.PREF_FAKE_DNS_ENABLED, false)
+        MmkvManager.encodeSettings(AppConfig.PREF_AUTO_DNS_ENABLED, false)
+        MmkvManager.removeSettings(AppConfig.PREF_DNS_SELECTOR_MODE)
+
+        MmkvManager.encodeSettings(migrationKey, true)
     }
 
     private fun migrateHysteria2PinSHA256() {

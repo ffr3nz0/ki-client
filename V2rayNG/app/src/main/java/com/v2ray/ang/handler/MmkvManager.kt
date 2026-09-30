@@ -819,6 +819,10 @@ object MmkvManager {
         return settingsStorage.encode(key, value)
     }
 
+    fun removeSettings(key: String) {
+        settingsStorage.remove(key)
+    }
+
     /**
      * Encodes the settings.
      *

@@ -72,6 +72,11 @@ object CoreOutboundBuilder {
                 outbound.mux?.concurrency = -1
             }
 
+            val sockopt = outbound.ensureSockopt()
+            if (sockopt.tcpKeepAliveIdle == null) {
+                sockopt.tcpKeepAliveIdle = 60
+            }
+
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "Failed to update outbound with global settings", e)
             return false
@@ -421,11 +426,10 @@ object CoreOutboundBuilder {
 
             NetworkType.WS.type -> {
                 val wssetting = OutboundBean.StreamSettingsBean.WsSettingsBean()
-                val server = profileItem.server
                 val wsHost = when {
                     !host.isNullOrBlank() -> host.orEmpty()
                     !profileItem.sni.isNullOrBlank() -> profileItem.sni.orEmpty()
-                    !server.isNullOrBlank() && !Utils.isPureIpAddress(server) -> server
+                    !profileItem.server.isNullOrBlank() -> profileItem.server.orEmpty()
                     else -> ""
                 }
                 wssetting.host = wsHost
@@ -437,11 +441,10 @@ object CoreOutboundBuilder {
 
             NetworkType.HTTP_UPGRADE.type -> {
                 val httpupgradeSetting = OutboundBean.StreamSettingsBean.HttpupgradeSettingsBean()
-                val server = profileItem.server
                 val huHost = when {
                     !host.isNullOrBlank() -> host.orEmpty()
                     !profileItem.sni.isNullOrBlank() -> profileItem.sni.orEmpty()
-                    !server.isNullOrBlank() && !Utils.isPureIpAddress(server) -> server
+                    !profileItem.server.isNullOrBlank() -> profileItem.server.orEmpty()
                     else -> ""
                 }
                 httpupgradeSetting.host = huHost

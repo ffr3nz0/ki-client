@@ -146,11 +146,11 @@ object DnsSelectorManager {
         val vpnIp = preset.primaryIp
 
         MmkvManager.encodeSettings(AppConfig.PREF_REMOTE_DNS, remoteResolver)
-        MmkvManager.encodeSettings(AppConfig.PREF_VPN_DNS, vpnIp)
+        MmkvManager.encodeSettings(AppConfig.PREF_VPN_DNS, AppConfig.DNS_VPN)
         MmkvManager.encodeSettings(AppConfig.PREF_DOMESTIC_DNS, AppConfig.DNS_DIRECT)
         MmkvManager.encodeSettings(AppConfig.PREF_DNS_SELECTOR_MODE, preset.id)
 
-        LogUtil.i(TAG, "Applied foreign DNS preset '${preset.displayName}': remote=$remoteResolver, vpn=$vpnIp, domestic=${AppConfig.DNS_DIRECT}")
+        LogUtil.i(TAG, "Applied foreign DNS preset '${preset.displayName}': remote=$remoteResolver, vpn=${AppConfig.DNS_VPN}, domestic=${AppConfig.DNS_DIRECT}")
 
         if (context != null && CoreServiceManager.isRunning()) {
             LauncherManager.restartService(context)

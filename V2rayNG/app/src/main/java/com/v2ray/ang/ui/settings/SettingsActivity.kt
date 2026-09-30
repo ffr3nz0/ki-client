@@ -143,10 +143,11 @@ fun SettingsScreen(
     var fakeDns by rememberMmkvBool(AppConfig.PREF_FAKE_DNS_ENABLED, false)
 
     // --- Smart DNS Selector ---
-    var autoDns by rememberMmkvBool(AppConfig.PREF_AUTO_DNS_ENABLED, true)
-    var dnsPresetMode by rememberMmkvString(AppConfig.PREF_DNS_SELECTOR_MODE, "auto")
+    var autoDns by rememberMmkvBool(AppConfig.PREF_AUTO_DNS_ENABLED, false)
+    var dnsPresetMode by rememberMmkvString(AppConfig.PREF_DNS_SELECTOR_MODE, "custom")
     var remoteDns by rememberMmkvString(AppConfig.PREF_REMOTE_DNS, "")
     var domesticDns by rememberMmkvString(AppConfig.PREF_DOMESTIC_DNS, "")
+    var dnsHosts by rememberMmkvString(AppConfig.PREF_DNS_HOSTS, "")
     var isBenchmarkingDns by remember { mutableStateOf(false) }
 
     val dnsPresetEntries = listOf(
@@ -426,18 +427,21 @@ fun SettingsScreen(
                         }
                     }
                 )
-                if (dnsPresetMode == "custom") {
-                    SettingsEditItem(
-                        title = stringResource(R.string.title_pref_remote_dns),
-                        value = remoteDns,
-                        onValueChanged = { remoteDns = it }
-                    )
-                    SettingsEditItem(
-                        title = stringResource(R.string.title_pref_domestic_dns),
-                        value = domesticDns,
-                        onValueChanged = { domesticDns = it }
-                    )
-                }
+                SettingsEditItem(
+                    title = stringResource(R.string.title_pref_remote_dns),
+                    value = remoteDns,
+                    onValueChanged = { remoteDns = it }
+                )
+                SettingsEditItem(
+                    title = stringResource(R.string.title_pref_domestic_dns),
+                    value = domesticDns,
+                    onValueChanged = { domesticDns = it }
+                )
+                SettingsEditItem(
+                    title = stringResource(R.string.title_pref_dns_hosts),
+                    value = dnsHosts,
+                    onValueChanged = { dnsHosts = it }
+                )
             }
 
             // 4. Core & LAN Sharing Settings
