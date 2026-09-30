@@ -22,6 +22,7 @@ import com.v2ray.ang.extension.toastError
 import com.v2ray.ang.extension.toastSuccess
 import com.v2ray.ang.handler.AngConfigManager
 import com.v2ray.ang.handler.DnsCacheManager
+import com.v2ray.ang.handler.DnsSelectorManager
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsChangeManager
 import com.v2ray.ang.handler.SettingsManager
@@ -138,6 +139,10 @@ class MainActivity : HelperBaseComponentActivity() {
     }
 
     private fun navigateTo(destination: MainDestination) {
+        if (destination == MainDestination.LanShare) {
+            mainViewModel.onAction(MainAction.OpenLanShare)
+            return
+        }
         val intent = when (destination) {
             MainDestination.Subscriptions -> Intent(this, SubSettingActivity::class.java)
             MainDestination.PerAppProxy -> Intent(this, PerAppProxyActivity::class.java)
@@ -166,6 +171,9 @@ class MainActivity : HelperBaseComponentActivity() {
         if (mainViewModel.uiState.value.isRunning) {
             LauncherManager.stopService(this)
         } else {
+            lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                DnsSelectorManager.ensureDnsHealthy(this@MainActivity)
+            }
             requestServiceStart()
         }
     }

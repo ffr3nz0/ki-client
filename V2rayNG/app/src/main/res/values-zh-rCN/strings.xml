@@ -577,4 +577,15 @@
     <string name="lan_share_desc">将其他设备（电视、电脑、游戏机）连接到此手机的热点/局域网并设置代理：</string>
     <string name="lan_share_copied">已复制到剪贴板</string>
 
+    <string name="title_dns_selector">智能 DNS 选择器</string>
+    <string name="title_pref_auto_dns">根据网络自动选择 DNS</string>
+    <string name="summary_pref_auto_dns">当运营商干扰或屏蔽 DNS 时自动切换到可用服务器</string>
+    <string name="title_pref_dns_preset">DNS 预设方案</string>
+    <string name="title_test_and_select_dns">测速并应用最快 DNS</string>
+    <string name="summary_test_and_select_dns">测试当前网络下的 DNS 延迟并应用延迟最低的服务器</string>
+    <string name="dns_test_in_progress">正在测试 DNS 服务器延迟...</string>
+    <string name="dns_test_success">已选用 «%1$s» (延迟 %2$d 毫秒)</string>
+    <string name="dns_test_failed">未发现可正常响应的 DNS 服务器</string>
+    <string name="dns_preset_auto">智能自动 (当前网络最优)</string>
+    <string name="dns_preset_custom">自定义 (手动设置)</string>
 </resources>

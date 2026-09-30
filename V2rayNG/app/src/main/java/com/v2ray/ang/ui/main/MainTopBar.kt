@@ -131,6 +131,14 @@ fun MainTopBar(
                     )
                 }
 
+                IconButton(onClick = { onAction(MainAction.OpenLanShare) }) {
+                    Icon(
+                        painterResource(R.drawable.ic_share_24dp),
+                        contentDescription = stringResource(R.string.lan_share_title),
+                        tint = colorFabActive
+                    )
+                }
+
                 Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
                     IconButton(onClick = { showImportMenu = true }) {
                         Icon(

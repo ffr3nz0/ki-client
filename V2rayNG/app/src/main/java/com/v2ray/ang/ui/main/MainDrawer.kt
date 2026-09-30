@@ -38,6 +38,7 @@ import com.v2ray.ang.ui.compose.LocalDarkTheme
 import com.v2ray.ang.ui.compose.verticalScrollbar
 
 enum class MainDestination(@DrawableRes val iconRes: Int, @StringRes val labelRes: Int) {
+    LanShare(R.drawable.ic_share_24dp, R.string.lan_share_title),
     Subscriptions(R.drawable.ic_subscriptions_24dp, R.string.title_sub_setting),
     PerAppProxy(R.drawable.ic_per_apps_24dp, R.string.per_app_proxy_settings),
     Routing(R.drawable.ic_routing_24dp, R.string.routing_settings_title),
@@ -51,6 +52,7 @@ enum class MainDestination(@DrawableRes val iconRes: Int, @StringRes val labelRe
 }
 
 private val primaryDrawerItems = listOf(
+    MainDestination.LanShare,
     MainDestination.Subscriptions,
     MainDestination.PerAppProxy,
     MainDestination.Routing,

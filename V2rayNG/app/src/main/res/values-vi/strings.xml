@@ -577,4 +577,15 @@
     <string name="lan_share_desc">Kết nối các thiết bị khác (TV, PC, Console) vào Hotspot/Wi-Fi của điện thoại này và đặt proxy:</string>
     <string name="lan_share_copied">Đã sao chép vào khay nhớ tạm</string>
 
+    <string name="title_dns_selector">Bộ chọn DNS thông minh</string>
+    <string name="title_pref_auto_dns">Tự động chọn DNS theo mạng</string>
+    <string name="summary_pref_auto_dns">Tự động chuyển đổi DNS nếu nhà mạng chặn hoặc làm chậm truy vấn</string>
+    <string name="title_pref_dns_preset">Cấu hình sẵn DNS</string>
+    <string name="title_test_and_select_dns">Kiểm tra và áp dụng DNS nhanh nhất</string>
+    <string name="summary_test_and_select_dns">Đo độ trễ DNS trên mạng hiện tại và áp dụng máy chủ tốt nhất</string>
+    <string name="dns_test_in_progress">Đang kiểm tra độ trễ các máy chủ DNS...</string>
+    <string name="dns_test_success">Đã chọn «%1$s» với độ trễ %2$d ms</string>
+    <string name="dns_test_failed">Không tìm thấy máy chủ DNS phản hồi</string>
+    <string name="dns_preset_auto">Tự động thông minh (tốt nhất mạng này)</string>
+    <string name="dns_preset_custom">Tùy chỉnh (thủ công)</string>
 </resources>

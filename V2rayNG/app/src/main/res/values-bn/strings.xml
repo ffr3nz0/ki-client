@@ -579,4 +579,15 @@
     <string name="lan_share_desc">অন্যান্য ডিভাইস (টিভি, পিসি, কনসোল) এই ফোনের হটস্পট/ওয়াইফাইয়ে যুক্ত করুন এবং প্রক্সি সেট করুন:</string>
     <string name="lan_share_copied">ক্লিপবোর্ডে কপি করা হয়েছে</string>
 
+    <string name="title_dns_selector">স্মার্ট ডিএনএস নির্বাচক</string>
+    <string name="title_pref_auto_dns">নেটওয়ার্ক অনুযায়ী স্বয়ংক্রিয় ডিএনএস নির্বাচন</string>
+    <string name="summary_pref_auto_dns">আইএসপি ডিএনএস ব্লক বা স্লো করলে স্বয়ংক্রিয়ভাবে কার্যকর ডিএনএসে স্যুইচ করুন</string>
+    <string name="title_pref_dns_preset">ডিএনএস সার্ভার প্রিসেট</string>
+    <string name="title_test_and_select_dns">দ্রুততম ডিএনএস পরীক্ষা এবং প্রয়োগ করুন</string>
+    <string name="summary_test_and_select_dns">বর্তমান সংযোগে ডিএনএস লেটেন্সি পরিমাপ করে সেরাটি প্রয়োগ করুন</string>
+    <string name="dns_test_in_progress">ডিএনএস সার্ভার পরীক্ষা করা হচ্ছে...</string>
+    <string name="dns_test_success">«%1$s» সার্ভারটি %2$d ms লেটেন্সিসহ নির্বাচিত হয়েছে</string>
+    <string name="dns_test_failed">কোনো কার্যকর ডিএনএস সার্ভার পাওয়া যায়নি</string>
+    <string name="dns_preset_auto">স্মার্ট অটো (নেটওয়ার্কে সেরা)</string>
+    <string name="dns_preset_custom">কাস্টম (ম্যানুয়াল কনফিগারেশন)</string>
 </resources>

@@ -595,4 +595,15 @@
     <string name="lan_share_desc">دستگاه‌های دیگر (تلویزیون، لپ‌تاپ، کنسول) را به هات‌اسپات این گوشی وصل کرده و پروکسی دستی تنظیم کنید:</string>
     <string name="lan_share_copied">در کلیپ‌بورد کپی شد</string>
 
+    <string name="title_dns_selector">سلکتور هوشمند DNS</string>
+    <string name="title_pref_auto_dns">انتخاب خودکار DNS بر اساس اینترنت</string>
+    <string name="summary_pref_auto_dns">سوییچ خودکار به پایدارترین DNS در صورت اختلال یا فیلتر شدن سرورها توسط اپراتور (مثل مخابرات یا همراه‌اول)</string>
+    <string name="title_pref_dns_preset">پریست سرور DNS</string>
+    <string name="title_test_and_select_dns">تست و اعمال سریع‌ترین DNS</string>
+    <string name="summary_test_and_select_dns">ارزیابی پینگ و سلامت سرورها روی اینترنت فعلی و اعمال بهترین گزینه</string>
+    <string name="dns_test_in_progress">در حال بررسی و تست پینگ سرورهای DNS...</string>
+    <string name="dns_test_success">DNS «%1$s» با تاخیر %2$d میلی‌ثانیه انتخاب و اعمال شد</string>
+    <string name="dns_test_failed">هیچ سرور DNS پاسخگو روی اینترنت فعلی یافت نشد</string>
+    <string name="dns_preset_auto">هوشمند / خودکار (بهترین بر اساس اینترنت)</string>
+    <string name="dns_preset_custom">سفارشی (تنظیم دستی)</string>
 </resources>
