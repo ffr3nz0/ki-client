@@ -9,9 +9,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
-import java.net.DatagramPacket
-import java.net.DatagramSocket
-import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
 
@@ -23,63 +20,73 @@ object DnsSelectorManager {
     data class DnsPreset(
         val id: String,
         val displayName: String,
+        val dohUrl: String,
         val primaryIp: String,
         val secondaryIp: String = ""
     )
 
-    // Exclusively fast, reliable international/foreign DNS resolvers (pure IPs to prevent DoH bootstrap & SNI delays)
+    // Curated international/foreign DNS resolvers with verified DoH endpoints (over TCP) and pure IPs
     val PRESETS: List<DnsPreset> = listOf(
         DnsPreset(
             id = "cloudflare",
-            displayName = "Cloudflare (1.1.1.1 / 1.0.0.1)",
+            displayName = "Cloudflare (1.1.1.1 / DoH)",
+            dohUrl = "https://cloudflare-dns.com/dns-query",
             primaryIp = "1.1.1.1",
             secondaryIp = "1.0.0.1"
         ),
         DnsPreset(
             id = "google",
-            displayName = "Google (8.8.8.8 / 8.8.4.4)",
+            displayName = "Google (8.8.8.8 / DoH)",
+            dohUrl = "https://dns.google/dns-query",
             primaryIp = "8.8.8.8",
             secondaryIp = "8.8.4.4"
         ),
         DnsPreset(
             id = "quad9",
-            displayName = "Quad9 (9.9.9.9 / 149.112.112.112)",
+            displayName = "Quad9 (9.9.9.9 / Secure)",
+            dohUrl = "https://dns.quad9.net/dns-query",
             primaryIp = "9.9.9.9",
             secondaryIp = "149.112.112.112"
         ),
         DnsPreset(
             id = "opendns",
             displayName = "OpenDNS Cisco (208.67.222.222)",
+            dohUrl = "https://doh.opendns.com/dns-query",
             primaryIp = "208.67.222.222",
             secondaryIp = "208.67.220.220"
         ),
         DnsPreset(
             id = "adguard",
             displayName = "AdGuard DNS (94.140.14.14)",
+            dohUrl = "https://dns.adguard-dns.com/dns-query",
             primaryIp = "94.140.14.14",
             secondaryIp = "94.140.15.15"
         ),
         DnsPreset(
             id = "controld",
             displayName = "Control D (76.76.2.0)",
+            dohUrl = "https://freedns.controld.com/p0",
             primaryIp = "76.76.2.0",
             secondaryIp = "76.76.10.0"
         ),
         DnsPreset(
             id = "dnswatch",
             displayName = "DNS.WATCH (84.200.69.80)",
+            dohUrl = "84.200.69.80",
             primaryIp = "84.200.69.80",
             secondaryIp = "84.200.70.40"
         ),
         DnsPreset(
             id = "level3",
             displayName = "Level3 / Lumen (4.2.2.4)",
+            dohUrl = "4.2.2.4",
             primaryIp = "4.2.2.4",
             secondaryIp = "4.2.2.2"
         ),
         DnsPreset(
             id = "yandex",
             displayName = "Yandex DNS (77.88.8.8)",
+            dohUrl = "https://common.dot.dns.yandex.net/dns-query",
             primaryIp = "77.88.8.8",
             secondaryIp = "77.88.8.1"
         )
@@ -88,51 +95,24 @@ object DnsSelectorManager {
     fun getPresetById(id: String): DnsPreset? = PRESETS.firstOrNull { it.id == id }
 
     /**
-     * Measures latency to a DNS server (IP port 53).
-     * First attempts a real UDP DNS query. If UDP times out (e.g. blocked by ISP),
-     * falls back to TCP socket connection to verify reachability.
-     * Returns round-trip time in milliseconds, or -1 if unreachable/blocked.
+     * Measures TCP handshake latency to a DNS server.
+     * Uses TCP port 443 (DoH port) or port 53 to verify real end-to-end connectivity,
+     * avoiding local Iranian ISP UDP 53 DNS poisoning/spoofing.
+     * Returns round-trip time in milliseconds, or -1 if unreachable.
      */
-    suspend fun benchmarkDns(ip: String, timeoutMs: Int = 1200): Long = withContext(Dispatchers.IO) {
+    suspend fun benchmarkDns(ip: String, timeoutMs: Int = 1400): Long = withContext(Dispatchers.IO) {
         val startTime = System.currentTimeMillis()
-        // 1. Try UDP DNS query
+        // 1. Try TCP connect to port 443 (DoH service)
         try {
-            DatagramSocket().use { socket ->
-                socket.soTimeout = timeoutMs
-                val address = InetAddress.getByName(ip)
-                // Minimal standard DNS query packet for "cloudflare.com" (Type A, Class IN)
-                val dnsQuery = byteArrayOf(
-                    0x12.toByte(), 0x34.toByte(), // ID
-                    0x01.toByte(), 0x00.toByte(), // Flags: standard recursive query
-                    0x00.toByte(), 0x01.toByte(), // QDCOUNT: 1 question
-                    0x00.toByte(), 0x00.toByte(), // ANCOUNT: 0
-                    0x00.toByte(), 0x00.toByte(), // NSCOUNT: 0
-                    0x00.toByte(), 0x00.toByte(), // ARCOUNT: 0
-                    // "cloudflare" (10) + "com" (3) + 0
-                    0x0a.toByte(),
-                    'c'.code.toByte(), 'l'.code.toByte(), 'o'.code.toByte(), 'u'.code.toByte(), 'd'.code.toByte(),
-                    'f'.code.toByte(), 'l'.code.toByte(), 'a'.code.toByte(), 'r'.code.toByte(), 'e'.code.toByte(),
-                    0x03.toByte(),
-                    'c'.code.toByte(), 'o'.code.toByte(), 'm'.code.toByte(),
-                    0x00.toByte(),
-                    0x00.toByte(), 0x01.toByte(), // QTYPE: A
-                    0x00.toByte(), 0x01.toByte()  // QCLASS: IN
-                )
-                val packet = DatagramPacket(dnsQuery, dnsQuery.size, address, 53)
-                socket.send(packet)
-
-                val buffer = ByteArray(512)
-                val response = DatagramPacket(buffer, buffer.size)
-                socket.receive(response)
-
+            Socket().use { tcpSocket ->
+                tcpSocket.connect(InetSocketAddress(ip, 443), timeoutMs)
                 val elapsed = System.currentTimeMillis() - startTime
                 return@withContext elapsed.coerceAtLeast(1L)
             }
         } catch (_: Exception) {
-            // UDP failed or timed out (common ISP filtering/poisoning)
         }
 
-        // 2. Fallback: TCP port 53 probe
+        // 2. Fallback: TCP connect to port 53
         try {
             Socket().use { tcpSocket ->
                 tcpSocket.connect(InetSocketAddress(ip, 53), timeoutMs)
@@ -140,7 +120,6 @@ object DnsSelectorManager {
                 return@withContext elapsed.coerceAtLeast(1L)
             }
         } catch (_: Exception) {
-            // Both UDP and TCP failed
             return@withContext -1L
         }
     }
@@ -159,22 +138,19 @@ object DnsSelectorManager {
 
     /**
      * Applies a specific DNS preset to MMKV configurations.
+     * Sets remote DNS to the provider's DoH endpoint (over TCP proxy tunnel) and
+     * VPN DNS to the pure IP.
      */
     fun applyPreset(context: Context?, preset: DnsPreset) {
-        val ipPair = if (preset.secondaryIp.isNotBlank()) {
-            "${preset.primaryIp},${preset.secondaryIp}"
-        } else {
-            preset.primaryIp
-        }
+        val remoteResolver = if (preset.dohUrl.isNotBlank()) preset.dohUrl else preset.primaryIp
+        val vpnIp = preset.primaryIp
 
-        MmkvManager.encodeSettings(AppConfig.PREF_REMOTE_DNS, ipPair)
-        MmkvManager.encodeSettings(AppConfig.PREF_VPN_DNS, ipPair)
-        // Keep domestic DNS strictly as direct (223.5.5.5) so Iranian direct routing never attempts
-        // foreign DNS lookups over unproxied local ISP networks where foreign UDP 53 is poisoned/blocked.
+        MmkvManager.encodeSettings(AppConfig.PREF_REMOTE_DNS, remoteResolver)
+        MmkvManager.encodeSettings(AppConfig.PREF_VPN_DNS, vpnIp)
         MmkvManager.encodeSettings(AppConfig.PREF_DOMESTIC_DNS, AppConfig.DNS_DIRECT)
         MmkvManager.encodeSettings(AppConfig.PREF_DNS_SELECTOR_MODE, preset.id)
 
-        LogUtil.i(TAG, "Applied foreign DNS preset '${preset.displayName}': remote=$ipPair, vpn=$ipPair, domestic=${AppConfig.DNS_DIRECT}")
+        LogUtil.i(TAG, "Applied foreign DNS preset '${preset.displayName}': remote=$remoteResolver, vpn=$vpnIp, domestic=${AppConfig.DNS_DIRECT}")
 
         if (context != null && CoreServiceManager.isRunning()) {
             LauncherManager.restartService(context)
@@ -200,31 +176,25 @@ object DnsSelectorManager {
     }
 
     /**
-     * Scans foreign DNS presets and applies the fastest one, but ONLY when VPN is OFF.
-     * When VPN is active, scanning is bypassed so we don't benchmark through the proxy/VPN tunnel.
+     * Scans foreign DNS presets and applies the fastest one when requested.
      */
     suspend fun scanAndSelectIfDisconnected(context: Context?, force: Boolean = false): Pair<DnsPreset, Long>? = withContext(Dispatchers.IO) {
-        val autoEnabled = MmkvManager.decodeSettingsBool(AppConfig.PREF_AUTO_DNS_ENABLED, true)
-        if (!autoEnabled) {
-            LogUtil.d(TAG, "Auto DNS is disabled, skipping scan.")
+        val autoEnabled = MmkvManager.decodeSettingsBool(AppConfig.PREF_AUTO_DNS_ENABLED, false)
+        if (!autoEnabled && !force) {
             return@withContext null
         }
 
         if (CoreServiceManager.isRunning()) {
-            LogUtil.d(TAG, "VPN is currently running; skipping disconnected DNS scan.")
             return@withContext null
         }
 
         val now = System.currentTimeMillis()
         if (!force && (now - lastScanTimestamp < SCAN_COOLDOWN_MS)) {
-            LogUtil.d(TAG, "Skipping DNS scan due to cooldown (${(now - lastScanTimestamp) / 1000}s ago)")
             return@withContext null
         }
 
-        LogUtil.i(TAG, "Executing foreign DNS scan while VPN is disconnected...")
         lastScanTimestamp = now
         val best = autoSelectBestDns(context = null)
         best
     }
-
 }

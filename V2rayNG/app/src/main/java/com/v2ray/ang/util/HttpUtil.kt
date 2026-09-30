@@ -4,7 +4,6 @@ import com.v2ray.ang.AppConfig
 import com.v2ray.ang.AppConfig.LOOPBACK
 import com.v2ray.ang.BuildConfig
 import com.v2ray.ang.dto.UrlContentRequest
-import com.v2ray.ang.handler.DnsCacheManager
 import okhttp3.Credentials
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -80,7 +79,26 @@ object HttpUtil {
      * @return The resolved IP address or the original input (if it's already an IP or resolution fails)
      */
     fun resolveHostToIP(host: String, ipv6Preferred: Boolean = false): List<String>? {
-        return DnsCacheManager.resolveHost(host, ipv6Preferred)
+        try {
+            if (Utils.isPureIpAddress(host)) {
+                return null
+            }
+            val addresses = java.net.InetAddress.getAllByName(host)
+            if (addresses.isEmpty()) {
+                return null
+            }
+            val sortedAddresses = if (ipv6Preferred) {
+                addresses.sortedWith(compareByDescending { it is java.net.Inet6Address })
+            } else {
+                addresses.sortedWith(compareBy { it is java.net.Inet6Address })
+            }
+            val ipList = sortedAddresses.mapNotNull { it.hostAddress }
+            LogUtil.i(AppConfig.TAG, "Resolved IPs for $host: ${ipList.joinToString()}")
+            return ipList
+        } catch (e: Exception) {
+            LogUtil.e(AppConfig.TAG, "Failed to resolve host to IP", e)
+            return null
+        }
     }
 
 

@@ -72,11 +72,6 @@ object CoreOutboundBuilder {
                 outbound.mux?.concurrency = -1
             }
 
-            val sockopt = outbound.ensureSockopt()
-            if (sockopt.tcpKeepAliveIdle == null) {
-                sockopt.tcpKeepAliveIdle = 15
-            }
-
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "Failed to update outbound with global settings", e)
             return false

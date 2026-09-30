@@ -151,9 +151,9 @@ fun SettingsScreen(
 
     val dnsPresetEntries = listOf(
         stringResource(R.string.dns_preset_auto),
-        "Cloudflare (1.1.1.1 / 1.0.0.1)",
-        "Google (8.8.8.8 / 8.8.4.4)",
-        "Quad9 (9.9.9.9 / 149.112.112.112)",
+        "Cloudflare (1.1.1.1 / DoH)",
+        "Google (8.8.8.8 / DoH)",
+        "Quad9 (9.9.9.9 / Secure)",
         "OpenDNS Cisco (208.67.222.222)",
         "AdGuard DNS (94.140.14.14)",
         "Control D (76.76.2.0)",

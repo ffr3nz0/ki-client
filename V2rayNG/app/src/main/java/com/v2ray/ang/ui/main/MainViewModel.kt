@@ -17,7 +17,6 @@ import com.v2ray.ang.extension.delay
 import com.v2ray.ang.extension.isComplexType
 import com.v2ray.ang.extension.matchesPattern
 import com.v2ray.ang.extension.moveItem
-import com.v2ray.ang.handler.DnsCacheManager
 import com.v2ray.ang.handler.DnsSelectorManager
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SubscriptionUpdater
@@ -95,31 +94,6 @@ class MainViewModel(
         collectServiceEvents()
         setupGroupTab()
         autoUpdateSubscriptionsOnStartup()
-        preResolveSelectedServer()
-        startPeriodicDnsScanner()
-    }
-
-    private fun startPeriodicDnsScanner() {
-        dnsScannerJob?.cancel()
-        dnsScannerJob = viewModelScope.launch(ioDispatcher) {
-            kotlinx.coroutines.delay(2000L)
-            DnsSelectorManager.scanAndSelectIfDisconnected(getApplication(), force = false)
-            while (isActive) {
-                kotlinx.coroutines.delay(10 * 60 * 1000L)
-                DnsSelectorManager.scanAndSelectIfDisconnected(getApplication(), force = false)
-            }
-        }
-    }
-
-    private fun preResolveSelectedServer() {
-        viewModelScope.launch(ioDispatcher) {
-            val selected = dataSource.getSelectServer() ?: return@launch
-            val profile = dataSource.decodeServerConfig(selected) ?: return@launch
-            val server = profile.server.orEmpty()
-            if (server.isNotEmpty() && !Utils.isPureIpAddress(server)) {
-                DnsCacheManager.preResolveAsync(server)
-            }
-        }
     }
 
     private fun autoUpdateSubscriptionsOnStartup() {
@@ -154,10 +128,6 @@ class MainViewModel(
             MainServiceEvent.StateRunning -> updateRunningState(true, clearTestingText = false)
             MainServiceEvent.StateNotRunning -> {
                 updateRunningState(false, clearTestingText = false)
-                viewModelScope.launch(ioDispatcher) {
-                    kotlinx.coroutines.delay(1000L)
-                    DnsSelectorManager.scanAndSelectIfDisconnected(getApplication(), force = true)
-                }
             }
             MainServiceEvent.StateStartSuccess -> {
                 toastSuccess(R.string.toast_services_success)
@@ -182,10 +152,6 @@ class MainViewModel(
 
             MainServiceEvent.StateStopSuccess -> {
                 updateRunningState(false)
-                viewModelScope.launch(ioDispatcher) {
-                    kotlinx.coroutines.delay(1000L)
-                    DnsSelectorManager.scanAndSelectIfDisconnected(getApplication(), force = true)
-                }
             }
             is MainServiceEvent.MeasureDelayResult -> {
                 _uiState.update { it.copy(status = MainStatus.ConnectionTest(event.result)) }
@@ -799,13 +765,6 @@ class MainViewModel(
         dataSource.setSelectServer(guid)
         _uiState.update { it.copy(selectedGuid = guid) }
         com.v2ray.ang.receiver.WidgetProvider.updateWidget(com.v2ray.ang.AngApplication.application)
-        viewModelScope.launch(ioDispatcher) {
-            val profile = dataSource.decodeServerConfig(guid)
-            val server = profile?.server.orEmpty()
-            if (server.isNotEmpty() && !Utils.isPureIpAddress(server)) {
-                DnsCacheManager.preResolveAsync(server)
-            }
-        }
     }
 
     fun refreshSelectedGuid() {

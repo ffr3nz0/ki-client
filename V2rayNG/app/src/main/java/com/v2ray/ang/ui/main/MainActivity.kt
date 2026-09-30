@@ -21,7 +21,6 @@ import com.v2ray.ang.extension.toast
 import com.v2ray.ang.extension.toastError
 import com.v2ray.ang.extension.toastSuccess
 import com.v2ray.ang.handler.AngConfigManager
-import com.v2ray.ang.handler.DnsCacheManager
 import com.v2ray.ang.handler.DnsSelectorManager
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsChangeManager
@@ -165,9 +164,6 @@ class MainActivity : HelperBaseComponentActivity() {
     }
 
     private fun handleFabAction() {
-        if (DnsCacheManager.onServiceToggle()) {
-            toast(R.string.toast_dns_cache_cleared)
-        }
         if (mainViewModel.uiState.value.isRunning) {
             LauncherManager.stopService(this)
         } else {
