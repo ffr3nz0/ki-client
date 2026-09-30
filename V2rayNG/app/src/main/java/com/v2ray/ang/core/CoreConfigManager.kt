@@ -618,11 +618,10 @@ object CoreConfigManager {
      * Configure local DNS inbounds, outbounds, and routing rules.
      */
     private fun configureLocalDns(configContext: CoreConfigContext, v2rayConfig: V2rayConfig) {
-        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_LOCAL_DNS_ENABLED) != true) {
-            return
-        }
+        val isVpn = SettingsManager.isVpnMode()
+        val isLocalDnsEnabled = MmkvManager.decodeSettingsBool(AppConfig.PREF_LOCAL_DNS_ENABLED) == true
 
-        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_FAKE_DNS_ENABLED) == true) {
+        if (isLocalDnsEnabled && MmkvManager.decodeSettingsBool(AppConfig.PREF_FAKE_DNS_ENABLED) == true) {
             val geositeCn = arrayListOf(AppConfig.GEOSITE_CN)
             val routingDomains = configContext.routingDomainRules
                 .asSequence()
@@ -641,38 +640,34 @@ object CoreConfigManager {
             )
         }
 
-        if (SettingsManager.isVpnMode()) {
-            if (SettingsManager.isUsingHevTun()) {
-                //hev-socks5-tunnel dns routing
+        // In VPN mode or when local DNS is enabled, hijack device port-53 queries into
+        // the core's DNS engine (dns-out) so that apps can resolve domains reliably via
+        // the configured remote resolver (DoH over TCP) rather than leaking raw UDP 53
+        // queries to proxies or networks that drop UDP packets.
+        if (isVpn || isLocalDnsEnabled) {
+            val inboundTag = if (isVpn && !SettingsManager.isUsingHevTun()) "tun" else "socks"
+            if (v2rayConfig.routing.rules.none { it.outboundTag == "dns-out" && it.port == "53" }) {
                 v2rayConfig.routing.rules.add(
                     0, V2rayConfig.RoutingBean.RulesBean(
-                        inboundTag = arrayListOf("socks"),
-                        outboundTag = "dns-out",
-                        port = "53",
-                    )
-                )
-            } else {
-                v2rayConfig.routing.rules.add(
-                    0, V2rayConfig.RoutingBean.RulesBean(
-                        inboundTag = arrayListOf("tun"),
+                        inboundTag = arrayListOf(inboundTag),
                         outboundTag = "dns-out",
                         port = "53",
                     )
                 )
             }
-        }
 
-        // DNS outbound
-        if (v2rayConfig.outbounds.none { e -> e.protocol == "dns" && e.tag == "dns-out" }) {
-            v2rayConfig.outbounds.add(
-                V2rayConfig.OutboundBean(
-                    protocol = "dns",
-                    tag = "dns-out",
-                    settings = null,
-                    streamSettings = null,
-                    mux = null
+            // DNS outbound
+            if (v2rayConfig.outbounds.none { e -> e.protocol == "dns" && e.tag == "dns-out" }) {
+                v2rayConfig.outbounds.add(
+                    V2rayConfig.OutboundBean(
+                        protocol = "dns",
+                        tag = "dns-out",
+                        settings = null,
+                        streamSettings = null,
+                        mux = null
+                    )
                 )
-            )
+            }
         }
     }
 
@@ -949,6 +944,9 @@ object CoreConfigManager {
         hosts[AppConfig.DNS_QUAD9_DOMAIN] = AppConfig.DNS_QUAD9_ADDRESSES
         hosts[AppConfig.DNS_SB_DOMAIN] = AppConfig.DNS_SB_ADDRESSES
         hosts[AppConfig.DNS_YANDEX_DOMAIN] = AppConfig.DNS_YANDEX_ADDRESSES
+        hosts["dns.adguard-dns.com"] = arrayListOf("94.140.14.14", "94.140.15.15")
+        hosts["freedns.controld.com"] = arrayListOf("76.76.2.0", "76.76.10.0")
+        hosts["doh.opendns.com"] = arrayListOf("208.67.222.222", "208.67.220.220")
 
         val userHosts = MmkvManager.decodeSettingsString(AppConfig.PREF_DNS_HOSTS)
         if (userHosts.isNotNullEmpty()) {
