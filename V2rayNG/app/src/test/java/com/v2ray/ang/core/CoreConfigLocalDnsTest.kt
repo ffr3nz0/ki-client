@@ -188,9 +188,6 @@ class CoreConfigLocalDnsTest {
         assertTrue("Must contain Cloudflare DoH host", hosts.containsKey(AppConfig.DNS_CLOUDFLARE_DNS_COM_DOMAIN))
         assertTrue("Must contain Google DoH host", hosts.containsKey(AppConfig.DNS_GOOGLE_DOMAIN))
         assertTrue("Must contain Quad9 DoH host", hosts.containsKey(AppConfig.DNS_QUAD9_DOMAIN))
-        assertTrue("Must contain AdGuard DoH host", hosts.containsKey("dns.adguard-dns.com"))
-        assertTrue("Must contain Control D DoH host", hosts.containsKey("freedns.controld.com"))
-        assertTrue("Must contain OpenDNS DoH host", hosts.containsKey("doh.opendns.com"))
     }
 
     @Test

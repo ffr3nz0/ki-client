@@ -949,9 +949,6 @@ object CoreConfigManager {
         hosts[AppConfig.DNS_QUAD9_DOMAIN] = AppConfig.DNS_QUAD9_ADDRESSES
         hosts[AppConfig.DNS_SB_DOMAIN] = AppConfig.DNS_SB_ADDRESSES
         hosts[AppConfig.DNS_YANDEX_DOMAIN] = AppConfig.DNS_YANDEX_ADDRESSES
-        hosts["dns.adguard-dns.com"] = arrayListOf("94.140.14.14", "94.140.15.15")
-        hosts["freedns.controld.com"] = arrayListOf("76.76.2.0", "76.76.10.0")
-        hosts["doh.opendns.com"] = arrayListOf("208.67.222.222", "208.67.220.220")
 
         val userHosts = MmkvManager.decodeSettingsString(AppConfig.PREF_DNS_HOSTS)
         if (userHosts.isNotNullEmpty()) {
@@ -1072,7 +1069,7 @@ object CoreConfigManager {
 
         for (item in proxyOutboundList) {
             val domain = item.getServerAddress()
-            if (domain.isNullOrEmpty() || Utils.isPureIpAddress(domain)) {
+            if (domain.isNullOrEmpty()) {
                 continue
             }
 
@@ -1090,23 +1087,15 @@ object CoreConfigManager {
                 continue
             }
 
-            // Filter out known ISP DNS-poisoned/bogus IP addresses (e.g. 10.10.34.34 in Iran)
-            val cleanIps = resolvedIps.filterNot { ip ->
-                ip == "10.10.34.34" || (!domain.endsWith(".local") && (ip.startsWith("10.") || ip.startsWith("127.") || ip.startsWith("192.168.")))
-            }
-            if (cleanIps.isEmpty()) {
-                continue
-            }
-
             item.ensureSockopt().domainStrategy = "UseIP"
             item.ensureSockopt().happyEyeballs = V2rayConfig.OutboundBean.StreamSettingsBean.HappyEyeballsBean(
                 prioritizeIPv6 = preferIpv6,
                 interleave = 2
             )
-            newHosts[domain] = if (cleanIps.size == 1) {
-                cleanIps[0]
+            newHosts[domain] = if (resolvedIps.size == 1) {
+                resolvedIps[0]
             } else {
-                cleanIps
+                resolvedIps
             }
         }
 

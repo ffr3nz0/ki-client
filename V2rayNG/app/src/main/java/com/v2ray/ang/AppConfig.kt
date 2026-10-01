@@ -71,8 +71,6 @@ object AppConfig {
     const val PREF_REMOTE_DNS = "pref_remote_dns"
     const val PREF_DOMESTIC_DNS = "pref_domestic_dns"
     const val PREF_DNS_HOSTS = "pref_dns_hosts"
-    const val PREF_DNS_SELECTOR_MODE = "pref_dns_selector_mode"
-    const val PREF_AUTO_DNS_ENABLED = "pref_auto_dns_enabled"
     const val PREF_DELAY_TEST_URL = "pref_delay_test_url"
     const val PREF_IP_API_URL = "pref_ip_api_url"
     const val PREF_LOGLEVEL = "pref_core_loglevel"
@@ -195,6 +193,7 @@ object AppConfig {
     const val MSG_STATE_RESTART = 5
     const val MSG_MEASURE_DELAY = 6
     const val MSG_MEASURE_DELAY_RESULT = 61
+    const val MSG_MEASURE_DELAY_CANCEL = 62
     const val MSG_MEASURE_CONFIG_START = 7
     const val MSG_MEASURE_CONFIG_CANCEL = 71
     const val MSG_MEASURE_CONFIG_SUCCESS = 72

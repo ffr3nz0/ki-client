@@ -36,10 +36,8 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.AppConfig.VPN
 import com.v2ray.ang.R
-import com.v2ray.ang.extension.toast
 import com.v2ray.ang.extension.toastError
 import com.v2ray.ang.handler.AppLocaleManager
-import com.v2ray.ang.handler.DnsSelectorManager
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.MmkvManager.rememberMmkvBool
 import com.v2ray.ang.handler.MmkvManager.rememberMmkvString
@@ -113,7 +111,6 @@ fun SettingsScreen(
 
     var uiSettingsExpanded by rememberSaveable { mutableStateOf(false) }
     var vpnSettingsExpanded by rememberSaveable { mutableStateOf(false) }
-    var dnsSettingsExpanded by rememberSaveable { mutableStateOf(false) }
     var coreSettingsExpanded by rememberSaveable { mutableStateOf(false) }
     var muxSettingsExpanded by rememberSaveable { mutableStateOf(false) }
     var fragmentSettingsExpanded by rememberSaveable { mutableStateOf(false) }
@@ -142,40 +139,10 @@ fun SettingsScreen(
     var localDns by rememberMmkvBool(AppConfig.PREF_LOCAL_DNS_ENABLED, false)
     var fakeDns by rememberMmkvBool(AppConfig.PREF_FAKE_DNS_ENABLED, false)
 
-    // --- Smart DNS Selector ---
-    var autoDns by rememberMmkvBool(AppConfig.PREF_AUTO_DNS_ENABLED, false)
-    var dnsPresetMode by rememberMmkvString(AppConfig.PREF_DNS_SELECTOR_MODE, "custom")
+    // --- Core & DNS Settings ---
     var remoteDns by rememberMmkvString(AppConfig.PREF_REMOTE_DNS, "")
     var domesticDns by rememberMmkvString(AppConfig.PREF_DOMESTIC_DNS, "")
     var dnsHosts by rememberMmkvString(AppConfig.PREF_DNS_HOSTS, "")
-    var isBenchmarkingDns by remember { mutableStateOf(false) }
-
-    val dnsPresetEntries = listOf(
-        stringResource(R.string.dns_preset_auto),
-        "Cloudflare (1.1.1.1 / DoH)",
-        "Google (8.8.8.8 / DoH)",
-        "Quad9 (9.9.9.9 / Secure)",
-        "OpenDNS Cisco (208.67.222.222)",
-        "AdGuard DNS (94.140.14.14)",
-        "Control D (76.76.2.0)",
-        "DNS.WATCH (84.200.69.80)",
-        "Level3 / Lumen (4.2.2.4)",
-        "Yandex DNS (77.88.8.8)",
-        stringResource(R.string.dns_preset_custom)
-    )
-    val dnsPresetValues = listOf(
-        "auto",
-        "cloudflare",
-        "google",
-        "quad9",
-        "opendns",
-        "adguard",
-        "controld",
-        "dnswatch",
-        "level3",
-        "yandex",
-        "custom"
-    )
 
     // --- Core & Sharing ---
     var sniffingEnabled by rememberMmkvBool(AppConfig.PREF_SNIFFING_ENABLED, true)
@@ -362,89 +329,7 @@ fun SettingsScreen(
                 )
             }
 
-            // 3. Smart DNS Selector (Foreign only, automated ping-based)
-            CollapsiblePreferenceGroupHeader(
-                title = stringResource(R.string.title_dns_selector),
-                expanded = dnsSettingsExpanded,
-                onExpandedChange = { dnsSettingsExpanded = it }
-            )
-            if (dnsSettingsExpanded) {
-                SettingsSwitchItem(
-                    title = stringResource(R.string.title_pref_auto_dns),
-                    summary = stringResource(R.string.summary_pref_auto_dns),
-                    checked = autoDns,
-                    onCheckedChange = { autoDns = it }
-                )
-                SettingsListItem(
-                    title = stringResource(R.string.title_pref_dns_preset),
-                    entries = dnsPresetEntries,
-                    values = dnsPresetValues,
-                    selectedValue = dnsPresetMode,
-                    onSelected = { selected ->
-                        dnsPresetMode = selected
-                        if (selected == "auto") {
-                            scope.launch {
-                                isBenchmarkingDns = true
-                                val best = DnsSelectorManager.autoSelectBestDns(context)
-                                isBenchmarkingDns = false
-                                if (best != null) {
-                                    remoteDns = MmkvManager.decodeSettingsString(AppConfig.PREF_REMOTE_DNS, "") ?: ""
-                                    domesticDns = MmkvManager.decodeSettingsString(AppConfig.PREF_DOMESTIC_DNS, "") ?: ""
-                                    val msg = context.getString(R.string.dns_test_success, best.first.displayName, best.second)
-                                    context.toast(msg)
-                                } else {
-                                    context.toastError(R.string.dns_test_failed)
-                                }
-                            }
-                        } else if (selected != "custom") {
-                            val preset = DnsSelectorManager.getPresetById(selected)
-                            if (preset != null) {
-                                DnsSelectorManager.applyPreset(context, preset)
-                                remoteDns = MmkvManager.decodeSettingsString(AppConfig.PREF_REMOTE_DNS, "") ?: ""
-                                domesticDns = MmkvManager.decodeSettingsString(AppConfig.PREF_DOMESTIC_DNS, "") ?: ""
-                            }
-                        }
-                    }
-                )
-                SettingsMenuItem(
-                    title = stringResource(R.string.title_test_and_select_dns),
-                    subtitle = if (isBenchmarkingDns) stringResource(R.string.dns_test_in_progress) else stringResource(R.string.summary_test_and_select_dns),
-                    onClick = {
-                        if (isBenchmarkingDns) return@SettingsMenuItem
-                        scope.launch {
-                            isBenchmarkingDns = true
-                            val best = DnsSelectorManager.autoSelectBestDns(context)
-                            isBenchmarkingDns = false
-                            if (best != null) {
-                                dnsPresetMode = "auto"
-                                remoteDns = MmkvManager.decodeSettingsString(AppConfig.PREF_REMOTE_DNS, "") ?: ""
-                                domesticDns = MmkvManager.decodeSettingsString(AppConfig.PREF_DOMESTIC_DNS, "") ?: ""
-                                val msg = context.getString(R.string.dns_test_success, best.first.displayName, best.second)
-                                context.toast(msg)
-                            } else {
-                                context.toastError(R.string.dns_test_failed)
-                            }
-                        }
-                    }
-                )
-                SettingsEditItem(
-                    title = stringResource(R.string.title_pref_remote_dns),
-                    value = remoteDns,
-                    onValueChanged = { remoteDns = it }
-                )
-                SettingsEditItem(
-                    title = stringResource(R.string.title_pref_domestic_dns),
-                    value = domesticDns,
-                    onValueChanged = { domesticDns = it }
-                )
-                SettingsEditItem(
-                    title = stringResource(R.string.title_pref_dns_hosts),
-                    value = dnsHosts,
-                    onValueChanged = { dnsHosts = it }
-                )
-            }
-
-            // 4. Core & LAN Sharing Settings
+            // 3. Core & LAN Sharing Settings
             CollapsiblePreferenceGroupHeader(
                 title = stringResource(R.string.title_core_settings),
                 expanded = coreSettingsExpanded,
@@ -474,6 +359,21 @@ fun SettingsScreen(
                     value = socksPort,
                     keyboardNumber = true,
                     onValueChanged = { socksPort = it }
+                )
+                SettingsEditItem(
+                    title = stringResource(R.string.title_pref_remote_dns),
+                    value = remoteDns,
+                    onValueChanged = { remoteDns = it }
+                )
+                SettingsEditItem(
+                    title = stringResource(R.string.title_pref_domestic_dns),
+                    value = domesticDns,
+                    onValueChanged = { domesticDns = it }
+                )
+                SettingsEditItem(
+                    title = stringResource(R.string.title_pref_dns_hosts),
+                    value = dnsHosts,
+                    onValueChanged = { dnsHosts = it }
                 )
             }
 

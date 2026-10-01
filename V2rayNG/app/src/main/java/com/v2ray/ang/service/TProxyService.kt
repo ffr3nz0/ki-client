@@ -95,9 +95,6 @@ class TProxyService(
             val udpTimeout = parts.getOrNull(1)?.toIntOrNull() ?: 60
 
             appendLine("misc:")
-            appendLine("  task-stack-size: 20480")
-            appendLine("  connect-timeout: 5000")
-            appendLine("  limit-nofile: 65535")
             appendLine("  tcp-read-write-timeout: ${tcpTimeout * 1000}")
             appendLine("  udp-read-write-timeout: ${udpTimeout * 1000}")
             appendLine("  log-level: ${MmkvManager.decodeSettingsString(AppConfig.PREF_HEV_TUNNEL_LOGLEVEL, AppConfig.DEFAULT_HEV_TUNNEL_LOGLEVEL)}")

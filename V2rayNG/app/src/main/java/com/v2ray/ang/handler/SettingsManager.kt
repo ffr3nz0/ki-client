@@ -38,7 +38,7 @@ object SettingsManager {
     private var runtimeSocksPort: Int? = null
 
     fun initApp(context: Context) {
-        migrateAndSanitizeDnsSettings()
+        restoreUpstreamDnsSettings()
         ensureDefaultSettings()
         //ensureDefaultSubscription()
         initRoutingRulesets(context)
@@ -495,20 +495,21 @@ object SettingsManager {
         }
     }
 
-    private fun migrateAndSanitizeDnsSettings() {
-        val migrationKey = "sanitize_dns_settings_v259"
+    private fun restoreUpstreamDnsSettings() {
+        val migrationKey = "restore_upstream_dns_v260"
         if (MmkvManager.decodeSettingsBool(migrationKey, false)) {
             return
         }
 
-        // Force reset remote DNS, VPN DNS, and domestic DNS to known-good defaults to heal polluted states
+        // Force reset remote DNS, VPN DNS, domestic DNS, and hosts to clean upstream defaults to heal polluted states
         MmkvManager.encodeSettings(AppConfig.PREF_REMOTE_DNS, AppConfig.DNS_PROXY)
         MmkvManager.encodeSettings(AppConfig.PREF_VPN_DNS, AppConfig.DNS_VPN)
         MmkvManager.encodeSettings(AppConfig.PREF_DOMESTIC_DNS, AppConfig.DNS_DIRECT)
         MmkvManager.encodeSettings(AppConfig.PREF_LOCAL_DNS_ENABLED, false)
         MmkvManager.encodeSettings(AppConfig.PREF_FAKE_DNS_ENABLED, false)
-        MmkvManager.encodeSettings(AppConfig.PREF_AUTO_DNS_ENABLED, false)
-        MmkvManager.removeSettings(AppConfig.PREF_DNS_SELECTOR_MODE)
+        MmkvManager.encodeSettings(AppConfig.PREF_DNS_HOSTS, "")
+        MmkvManager.removeSettings("pref_auto_dns_enabled")
+        MmkvManager.removeSettings("pref_dns_selector_mode")
 
         MmkvManager.encodeSettings(migrationKey, true)
     }
