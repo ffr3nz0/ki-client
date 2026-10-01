@@ -13,8 +13,8 @@ android {
         applicationId = "com.kclient.ang"
         minSdk = 24
         targetSdk = 37
-        versionCode = 771
-        versionName = "2.6.1"
+        versionCode = 772
+        versionName = "2.6.2"
 
         val abiFilterList = (properties["ABI_FILTERS"] as? String)?.split(';')
         splits {

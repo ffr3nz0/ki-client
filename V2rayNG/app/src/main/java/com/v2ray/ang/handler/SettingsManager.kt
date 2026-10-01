@@ -38,6 +38,7 @@ object SettingsManager {
     private var runtimeSocksPort: Int? = null
 
     fun initApp(context: Context) {
+        checkAndHealOnUpgrade()
         restoreUpstreamDnsSettings()
         ensureDefaultSettings()
         //ensureDefaultSubscription()
@@ -492,6 +493,36 @@ object SettingsManager {
     private fun ensureDefaultValue(key: String, default: String) {
         if (MmkvManager.decodeSettingsString(key).isNullOrEmpty()) {
             MmkvManager.encodeSettings(key, default)
+        }
+    }
+
+    private fun checkAndHealOnUpgrade() {
+        val currentVersion = com.v2ray.ang.BuildConfig.VERSION_CODE
+        val lastVersion = MmkvManager.decodeSettingsInt("app_last_run_version_code", 0)
+        if (lastVersion < currentVersion) {
+            // When updating over an older version, wipe stale/corrupted legacy keys
+            MmkvManager.removeSettings("pref_auto_dns_enabled")
+            MmkvManager.removeSettings("pref_dns_selector_mode")
+            MmkvManager.removeSettings("sanitize_dns_settings_v259")
+            MmkvManager.removeSettings("restore_upstream_dns_v260")
+
+            // Re-validate and sanitize core DNS
+            val vpnDns = MmkvManager.decodeSettingsString(AppConfig.PREF_VPN_DNS)
+            if (vpnDns.isNullOrBlank() || !vpnDns.split(",").all { Utils.isPureIpAddress(it.trim()) }) {
+                MmkvManager.encodeSettings(AppConfig.PREF_VPN_DNS, AppConfig.DNS_VPN)
+            }
+            val remoteDns = MmkvManager.decodeSettingsString(AppConfig.PREF_REMOTE_DNS)
+            if (remoteDns.isNullOrBlank() || (!Utils.isPureIpAddress(remoteDns) && !Utils.isCoreDNSAddress(remoteDns))) {
+                MmkvManager.encodeSettings(AppConfig.PREF_REMOTE_DNS, AppConfig.DNS_PROXY)
+            }
+            val domesticDns = MmkvManager.decodeSettingsString(AppConfig.PREF_DOMESTIC_DNS)
+            if (domesticDns.isNullOrBlank() || (!Utils.isPureIpAddress(domesticDns) && !Utils.isCoreDNSAddress(domesticDns))) {
+                MmkvManager.encodeSettings(AppConfig.PREF_DOMESTIC_DNS, AppConfig.DNS_DIRECT)
+            }
+            MmkvManager.encodeSettings(AppConfig.PREF_LOCAL_DNS_ENABLED, false)
+            MmkvManager.encodeSettings(AppConfig.PREF_FAKE_DNS_ENABLED, false)
+
+            MmkvManager.encodeSettings("app_last_run_version_code", currentVersion)
         }
     }
 

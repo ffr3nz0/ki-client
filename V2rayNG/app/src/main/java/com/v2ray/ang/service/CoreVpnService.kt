@@ -304,6 +304,7 @@ class CoreVpnService : VpnService(), ServiceControl {
      */
     private fun runTun2socks() {
         if (SettingsManager.isUsingHevTun()) {
+            tun2SocksService?.stopTun2Socks()
             tun2SocksService = TProxyService(
                 context = applicationContext,
                 vpnInterface = mInterface,
@@ -311,6 +312,7 @@ class CoreVpnService : VpnService(), ServiceControl {
                 restartCallback = { runTun2socks() }
             )
         } else {
+            tun2SocksService?.stopTun2Socks()
             tun2SocksService = null
         }
 
