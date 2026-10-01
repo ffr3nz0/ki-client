@@ -593,4 +593,8 @@
     <string name="lan_share_switch_summary_on">區域網路分享已開啟</string>
     <string name="lan_share_switch_summary_off">分享已停用（僅限本機）</string>
     <string name="lan_share_disabled_hint">開啟上方開關即可與智慧電視、電腦或遊戲主機共享網路。</string>
+
+    <string name="error_vless_without_tls_prohibited">基於安全考量，公網中禁止使用未開啟 TLS 或加密的 VLESS。請在伺服器設定中開啟 TLS 或改用 VMess。</string>
+    <string name="error_trojan_without_tls_prohibited">公網中禁止使用未開啟 TLS 的 Trojan。請在伺服器設定中開啟 TLS。</string>
+    <string name="error_config_parse_failed">設定錯誤：無法解析伺服器設定。</string>
 </resources>

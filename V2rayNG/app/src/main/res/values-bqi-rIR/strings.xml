@@ -595,4 +595,8 @@
     <string name="lan_share_switch_summary_on">پروکسی سی بقیه دستگاه‌یلا متصل به هات‌اسپات فعاله</string>
     <string name="lan_share_switch_summary_off">اشتراک‌گذاری غیرفعاله (فقط سی ئی گوشی فعاله)</string>
     <string name="lan_share_disabled_hint">سی اشتراک اینترنت آزاد وا تلویزیون هوشمند یا کامپیوتر، سوییچ بالانه روشن کنین.</string>
+
+    <string name="error_vless_without_tls_prohibited">وصل وابیدن VLESS بی TLS یا رمزنگاری سی امنیت د اینترنت عمومی قذغنه. لطفاً TLSنه فعال بکین یا د VMess استفاده بکین.</string>
+    <string name="error_trojan_without_tls_prohibited">وصل وابیدن تروجان بی TLS د اینترنت عمومی قذغنه. لطفاً TLSنه د تنظیمات سرور فعال بکین.</string>
+    <string name="error_config_parse_failed">خطای کانفیگ: تنظیمات سرور خونده نوابی.</string>
 </resources>

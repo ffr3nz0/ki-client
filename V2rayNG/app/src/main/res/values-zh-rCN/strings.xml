@@ -593,4 +593,8 @@
     <string name="lan_share_switch_summary_on">局域网共享已开启</string>
     <string name="lan_share_switch_summary_off">共享已禁用（仅限本机）</string>
     <string name="lan_share_disabled_hint">开启上方开关即可与智能电视、电脑或游戏主机共享网络。</string>
+
+    <string name="error_vless_without_tls_prohibited">出于安全考虑，公网中禁止使用未开启 TLS 或加密的 VLESS。请在服务器设置中开启 TLS 或改用 VMess。</string>
+    <string name="error_trojan_without_tls_prohibited">公网中禁止使用未开启 TLS 的 Trojan。请在服务器设置中开启 TLS。</string>
+    <string name="error_config_parse_failed">配置错误：无法解析服务器配置。</string>
 </resources>

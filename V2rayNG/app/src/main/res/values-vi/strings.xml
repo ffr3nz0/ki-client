@@ -593,4 +593,8 @@
     <string name="lan_share_switch_summary_on">Proxy đang bật cho các thiết bị trong mạng</string>
     <string name="lan_share_switch_summary_off">Đã tắt chia sẻ (chỉ áp dụng cho máy này)</string>
     <string name="lan_share_disabled_hint">Bật công tắc phía trên để chia sẻ kết nối VPN với TV thông minh, máy tính hoặc máy chơi game.</string>
+
+    <string name="error_vless_without_tls_prohibited">VLESS không có TLS hoặc mã hóa bị cấm trên mạng công cộng vì lý do bảo mật. Vui lòng bật TLS hoặc sử dụng VMess.</string>
+    <string name="error_trojan_without_tls_prohibited">Trojan không có TLS bị cấm trên mạng công cộng. Vui lòng bật TLS trong cài đặt máy chủ.</string>
+    <string name="error_config_parse_failed">Lỗi cấu hình: không thể phân tích cấu hình máy chủ.</string>
 </resources>

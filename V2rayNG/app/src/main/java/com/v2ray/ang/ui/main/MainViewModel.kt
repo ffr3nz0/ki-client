@@ -20,6 +20,7 @@ import com.v2ray.ang.extension.moveItem
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SubscriptionUpdater
 import com.v2ray.ang.ui.base.BaseViewModel
+import com.v2ray.ang.util.CoreErrorHelper
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
 import kotlinx.coroutines.CancellationException
@@ -141,11 +142,10 @@ class MainViewModel(
 
             is MainServiceEvent.StateStartFailure -> {
                 val errorMsg = event.message?.takeUnless { it.isBlank() }
-                if (errorMsg != null) {
-                    toastError("${dataSource.getString(R.string.toast_services_failure)}: $errorMsg")
-                } else {
-                    toastError(R.string.toast_services_failure)
+                val displayMsg = CoreErrorHelper.formatServiceStartError(errorMsg) { resId ->
+                    dataSource.getString(resId)
                 }
+                toastError(displayMsg)
                 updateRunningState(false)
             }
 
@@ -202,7 +202,11 @@ class MainViewModel(
             val delay = dataSource.getString(R.string.server_test_delay_value, result.delayMillis)
             dataSource.getString(R.string.connection_test_available, delay)
         } else {
-            val detail = result.errorMessage.ifBlank {
+            val detail = if (result.errorMessage.isNotBlank()) {
+                CoreErrorHelper.formatCoreErrorMessage(result.errorMessage) { resId ->
+                    dataSource.getString(resId)
+                }
+            } else {
                 dataSource.getString(R.string.connection_test_empty_message)
             }
             dataSource.getString(R.string.connection_test_error, detail)

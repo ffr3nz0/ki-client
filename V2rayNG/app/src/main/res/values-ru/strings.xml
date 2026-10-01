@@ -599,4 +599,8 @@
     <string name="lan_share_switch_summary_on">Прокси включен для устройств в локальной сети</string>
     <string name="lan_share_switch_summary_off">Раздача отключена (только это устройство)</string>
     <string name="lan_share_disabled_hint">Включите переключатель выше, чтобы раздать VPN на Smart TV, ПК или консоль.</string>
+
+    <string name="error_vless_without_tls_prohibited">VLESS без TLS или шифрования запрещён в публичных сетях из соображений безопасности. Включите TLS в настройках сервера или используйте VMess.</string>
+    <string name="error_trojan_without_tls_prohibited">Trojan без TLS запрещён в публичных сетях. Включите TLS в настройках сервера.</string>
+    <string name="error_config_parse_failed">Ошибка конфигурации: невозможно разобрать настройки сервера.</string>
 </resources>

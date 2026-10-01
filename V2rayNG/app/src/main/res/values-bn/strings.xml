@@ -595,4 +595,8 @@
     <string name="lan_share_switch_summary_on">স্থানীয় নেটওয়ার্কের ডিভাইসের জন্য প্রক্সি চালু আছে</string>
     <string name="lan_share_switch_summary_off">শেয়ারিং বন্ধ আছে (শুধুমাত্র این ফোনে)</string>
     <string name="lan_share_disabled_hint">স্মার্ট টিভি, পিসি বা কনসোলের সাথে ভিপিএন শেয়ার করতে উপরের সুইচটি চালু করুন।</string>
+
+    <string name="error_vless_without_tls_prohibited">নিরাপত্তাজনিত কারণে পাবলিক নেটওয়ার্কে টিএলএস বা এনক্রিপশন ছাড়া VLESS ব্যবহার নিষিদ্ধ। অনুগ্রহ করে সার্ভার সেটিংসে TLS চালু করুন অথবা VMess ব্যবহার করুন।</string>
+    <string name="error_trojan_without_tls_prohibited">পাবলিক নেটওয়ার্কে TLS ছাড়া Trojan ব্যবহার নিষিদ্ধ। অনুগ্রহ করে সার্ভার সেটিংসে TLS চালু করুন।</string>
+    <string name="error_config_parse_failed">কনফিগারেশন ত্রুটি: সার্ভার কনফিগারেশন পার্স করা যায়নি।</string>
 </resources>

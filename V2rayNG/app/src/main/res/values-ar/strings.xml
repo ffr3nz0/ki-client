@@ -603,4 +603,8 @@
     <string name="lan_share_switch_summary_on">البروكسي مفعل للأجهزة على الشبكة المحلية</string>
     <string name="lan_share_switch_summary_off">المشاركة معطلة (لهذا الجهاز فقط)</string>
     <string name="lan_share_disabled_hint">قم بتفعيل المفتاح أعلاه لمشاركة اتصال VPN مع التلفزيون الذكي أو الكمبيوتر أو أجهزة الألعاب.</string>
+
+    <string name="error_vless_without_tls_prohibited">بروتوكول VLESS بدون تشفير TLS محظور على الشبكات العامة لأسباب أمنية. يرجى تفعيل TLS أو استخدام بروتوكول VMess.</string>
+    <string name="error_trojan_without_tls_prohibited">بروتوكول Trojan بدون TLS محظور على الشبكات العامة. يرجى تفعيل TLS في إعدادات الخادم.</string>
+    <string name="error_config_parse_failed">خطأ في التكوين: تعذر تحليل تكوين الخادم.</string>
 </resources>

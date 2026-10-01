@@ -611,4 +611,8 @@
     <string name="lan_share_switch_summary_on">پروکسی برای سایر دستگاه‌های متصل به هات‌اسپات فعال است</string>
     <string name="lan_share_switch_summary_off">اشتراک‌گذاری غیرفعال است (فقط برای این گوشی فعال است)</string>
     <string name="lan_share_disabled_hint">جهت اشتراک‌گذاری اینترنت آزاد با تلویزیون هوشمند، کامپیوتر یا کنسول بازی، سوییچ بالا را روشن نمایید.</string>
+
+    <string name="error_vless_without_tls_prohibited">اتصال VLESS بدون TLS یا رمزنگاری به دلایل امنیتی در اینترنت عمومی ممنوع است. لطفاً TLS را فعال کنید یا از پروتکل VMess استفاده نمایید.</string>
+    <string name="error_trojan_without_tls_prohibited">اتصال تروجان بدون TLS در اینترنت عمومی ممنوع است. لطفاً TLS را در تنظیمات سرور فعال کنید.</string>
+    <string name="error_config_parse_failed">خطای کانفیگ: عدم امکان پردازش و بارگذاری تنظیمات سرور.</string>
 </resources>
